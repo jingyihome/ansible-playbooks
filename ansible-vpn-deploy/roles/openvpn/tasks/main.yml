@@ -1,0 +1,52 @@
+---
+#install & config openvpn servers
+
+- name: install openvpn
+  action: apt package=openvpn state=present
+  tags:
+    - openvpn
+
+- name: ensure log dir exists 
+  file: path=/var/log/openvpn state=directory
+  tags:
+    - openvpn
+
+
+- name: upload server config files
+  action: template src=etc/openvpn/server.conf dest=/etc/openvpn/{{ item.name }}.conf
+  with_items: "{{ openvpn_servers }}"
+  notify:
+    - restart openvpn
+  tags:
+    - openvpn
+    - config0
+
+- name: install openvpn
+  action: apt package=openvpn-auth-radius state=present
+  tags:
+    - openvpn
+
+- name: upload radiusplugin config file
+  action: template src=etc/openvpn/radiusplugin.cnf dest=/etc/openvpn/radiusplugin-{{ item.name }}.cnf
+  with_items: "{{ openvpn_servers }}"
+  notify:
+    - restart openvpn
+  tags:
+    - openvpn
+
+- name: make sure /opt/easynat exists
+  action: file path=/opt/easynat/ state=directory
+  tags: 
+    - openvpn
+    - nat
+
+- name: set network in easynat rule file
+  action: lineinfile dest=/opt/easynat/rules.cnf 
+                     regexp="{{item.network.subnet}}" 
+                     line="{{item.network.subnet}}/{{item.network.mask}}" state=present create=yes
+  notify: 
+    - setup nat rules
+  with_items: "{{ openvpn_servers }}"
+  tags: 
+    - openvpn
+    - nat

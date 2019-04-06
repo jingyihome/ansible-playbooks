@@ -1,0 +1,28 @@
+---
+  - name: Install docker.io
+    yum: 
+      name: docker.io
+      state: latest
+      update_cache: yes
+
+  - name: Add an RPM gpg key
+    rpm_key:
+      state: present
+      url: https://packages.cloud.google.com/yum/doc/yum-key.gpg
+    rpm_key:
+      state: present
+      url: https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+  
+  - name: kubernetes repository list
+    yum_repository:
+      name: kubernetes
+      baseurl: 'https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64'
+      file: kubernetes.repo
+      gpgcheck: yes
+      update_cache: yes 
+
+  - name: Install kubeadm
+    yum: 
+      name: ['kubeadm=1.13.4-00', 'kubelet=1.13.4-00', 'kubectl=1.13.4-00']
+      state: present
+

@@ -1,0 +1,10 @@
+---
+
+- hosts: all
+  roles:
+    - common
+  vars_files:
+    - group_vars/all
+- hosts: init
+  roles:
+    - cert

@@ -1,0 +1,6 @@
+---
+- name: "restart ipsec"
+  service: name={{ ipsec_service_name }} state=restarted
+  tags:
+    - ipsec
+

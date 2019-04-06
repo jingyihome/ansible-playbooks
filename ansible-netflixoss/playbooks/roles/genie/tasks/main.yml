@@ -1,0 +1,68 @@
+---
+# Genie role
+- name: Stopping tomcat7 service
+  service: name=tomcat7 state=stopped
+
+- name: Copy tomcat server.xml file
+  copy: src=server.xml dest=/usr/local/tomcat/conf/server.xml owner=root group=root mode=0644
+
+- name: Remove default root webapp
+  file: path=/usr/local/tomcat/webapps/ROOT state=absent
+  
+- name: Create Genie directory
+  file: path=/mnt/tomcat/genie-jobs state=directory owner={{ tomcat_user }} group={{ tomcat_user }} mode=0755
+
+- name: Symlink genie-jobs to webapps
+  file: src=/mnt/tomcat/genie-jobs dest=/usr/local/tomcat/webapps/genie-jobs state=link
+
+- name: Ensure Pig conf directory exists
+  file: path=/home/hadoop/.versions/pig-0.11.1/conf state=directory owner={{ tomcat_user }} group={{ tomcat_user }} mode=0755
+  
+  # This is because Derby DB needs to be created
+- name: Make tomcat directory writable by tomcat
+  file: path=/var/lib/tomcat7 state=directory owner={{ tomcat_user }} group={{ tomcat_user }} mode=0755
+ 
+- name: Ensure the pig.properties file exists
+  # TODO: Replace with file state=touch after Ansible 1.4 is released
+  command: touch /home/hadoop/.versions/pig-0.11.1/conf/pig.properties
+
+- name: Copy local Genie WAR file {{ local_war }}
+  copy: src={{ local_war }} dest=/usr/local/tomcat/webapps/ROOT.war
+  when: local_war != ""
+  tags: deploy
+  
+- name: Download snapshot build of Genie from Cloudbees
+  get_url: url={{ latest_successful_build_url }} dest=/usr/local/tomcat/webapps/ROOT.war
+  when: local_war == ""
+  tags: deploy
+
+- name: Restart tomcat
+  service: name=tomcat7 state=restarted
+  tags: deploy
+    
+- name: Clone Genie repository from GitHub
+  git: repo={{ genie_repo }}
+       dest=/home/hadoop/genie
+       version={{ genie_branch }}
+  sudo: True
+  sudo_user: hadoop
+  tags: clone
+
+- name: Wait for Tomcat to be available
+  wait_for: port=7001 delay=30
+  
+- name: Register EMR cluster with Genie
+  command: sudo -u hadoop -H -i /home/hadoop/genie/deploy/aws/emr_genie_postinstall.sh
+  tags: reg
+
+
+# NOTES:
+#
+# If Tomcat fails with:
+#     SEVERE: Error listenerStart
+#
+# rm -r /usr/local/tomcat/genie-db /usr/local/tomcat/derby.log
+#
+
+
+

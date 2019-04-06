@@ -1,0 +1,5 @@
+
+- name: install commonly used os dependencies
+  shell:
+     yum install -y unzip bzip2 rsync
+

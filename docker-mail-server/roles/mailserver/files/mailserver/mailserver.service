@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the mail server stack
+Wants=network-online.target docker.service
+After=network-online.target docker.service
+[Service]
+WorkingDirectory=/home/{{ deploy_user_name }}
+User={{ deploy_user_name }}
+Type=oneshot
+ExecStart=/usr/local/bin/docker-compose up -d
+[Install]
+WantedBy=multi-user.target

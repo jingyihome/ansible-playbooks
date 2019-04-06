@@ -1,0 +1,15 @@
+---
+#- name: Kube dns
+#  kubernetes:
+#    api_endpoint: "{{ master_ip }}"
+#    insecure: true
+#    file_reference: /tmp/kube-dns.yaml
+#    state: present
+
+#- name: Kube dns
+#  shell: "kubectl create -f /tmp/kube-dns.yaml"
+#  when: dns_addon
+- name: Kube dns
+  shell: "kubectl create -f /tmp/coredns.yaml"
+  when: dns_addon
+  delegate_to: "{{ groups['masters'][0] }}"

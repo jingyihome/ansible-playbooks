@@ -1,0 +1,12 @@
+---
+- name: libvirt-kvm | networks | create internal network
+  virt_net: autostart=yes state=active name=internal xml='{{ lookup("template", "internal_net.xml.j2") }}'
+
+- name: libvirt-kvm | networks | create private network
+  virt_net: autostart=yes state=active name=private xml='{{ lookup("template", "private_net.xml.j2") }}'
+
+- name: libvirt-kvm | networks | create public network
+  virt_net: autostart=yes state=active name=public xml='{{ lookup("template", "public_net.xml.j2") }}'
+
+- name: libvirt-kvm | networks | remove default network
+  virt_net: state=absent name=default

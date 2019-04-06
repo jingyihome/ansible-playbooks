@@ -1,0 +1,24 @@
+---
+- name: Copying istio files on master
+  unarchive: 
+    src: "/tmp/istio-{{ istio_version }}-linux.tar.gz"
+    dest: "/usr/local/bin"
+  when: install_istio
+
+- name: Installing istio
+  command: kubectl apply -f /usr/local/bin/istio-{{ istio_version }}/install/kubernetes/istio-demo-auth.yaml
+  when: install_istio
+
+#- name: Creating signed cert for Automatic sidecar Injection
+#  command: /usr/local/bin/istio-{{ istio_version }}/install/kubernetes/webhook-create-signed-cert.sh --service istio-sidecar-injector --namespace istio-system --secret sidecar-injector-certs
+
+#- name: Installing Automatic sidecar Injection
+#  command: kubectl apply -f /usr/local/bin/istio-{{ istio_version }}/install/kubernetes/istio-sidecar-injector-with-ca-bundle.yaml
+
+- name: Labeling default namespace with auto-injector
+  command: kubectl label namespace default istio-injection=enabled
+  when: install_istio
+
+- name: Adding path variable
+  command: export "PATH=/usr/local/bin/istio-{{ istio_version }}/bin:$PATH"
+  when: install_istio

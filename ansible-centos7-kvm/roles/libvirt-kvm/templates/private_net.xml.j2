@@ -1,0 +1,8 @@
+<network>
+  <name>private</name>
+  <bridge name="br-private" stp="on" delay="0"/>
+  <forward mode="nat">
+  </forward>
+  <ip address="KVM_NETWORKS.PRIVATE.ADDRESS" netmask="KVM_NETWORKS.PRIVATE.NETMASK">
+  </ip>
+</network>

@@ -1,0 +1,16 @@
+---
+- name: ssh | disallow password authentication
+  lineinfile: dest=/etc/ssh/sshd_config regexp="^PasswordAuthentication" line="PasswordAuthentication no" state=present
+  notify: restart ssh
+
+- name: ssh | disallow root SSH access
+  lineinfile: dest=/etc/ssh/sshd_config regexp="^PermitRootLogin" line="PermitRootLogin no" state=present
+  notify: restart ssh
+
+- name: ssh | disable print motd to enable custom motd
+  lineinfile: dest=/etc/ssh/sshd_config regexp="^PrintMotd" line="PrintMotd no" insertafter="^#PrintMotd" state=present
+  notify: restart ssh
+
+- name: ssh | enable ssh banner
+  lineinfile: dest=/etc/ssh/sshd_config regexp="^Banner" line="Banner /etc/issue.net" insertafter="^#Banner" state=present
+  notify: restart ssh

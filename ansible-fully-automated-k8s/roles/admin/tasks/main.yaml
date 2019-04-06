@@ -1,0 +1,5 @@
+---
+- include_vars: "{{ playbook_dir }}/host_vars/global_vars.yaml"
+- include_tasks: prequisites.yaml 
+- include_tasks: certificates.yaml 
+- include_tasks: kubeconfigs.yaml

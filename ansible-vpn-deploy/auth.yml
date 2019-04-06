@@ -1,0 +1,22 @@
+---
+#This playbook setup VPN authentication and accounting service for VPN servers . 
+#It will install freeradius server with a mysql backend.
+
+- hosts: auth
+  roles:
+    - common
+    - webserver
+    - db
+    - auth
+    - role: radius-admin
+      djra_host: '127.0.0.1'
+      djra_port: 9001
+    - role: ftao.nginx-reverse-proxy
+      nginx_site_root: '/opt/djra/data/'
+      nginx_site_name: 'radius-admin'
+      nginx_site_server_name: 'default'
+      nginx_site_port: "{{ djra_nginx_port | default(9002) }}"
+      nginx_site_upstream_host: "127.0.0.1"
+      nginx_site_upstream_port: 9001
+
+

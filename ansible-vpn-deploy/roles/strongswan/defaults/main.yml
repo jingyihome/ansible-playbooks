@@ -1,0 +1,51 @@
+---
+ipsec_enable_l2tp: true
+ipsec_enable_ikev1: true
+ipsec_enable_ikev2: true
+ipsec_enable_charondebug: false
+
+ipsec_remote_address: "{{ inventory_hostname }}"
+#ipsec_remote_address: "{{ ansible_default_ipv4.address }}"
+ipsec_use_ip_as_domain: false
+ipsec_domain: "{{ inventory_hostname }}"
+ipsec_bind_ip:  "{{ ansible_default_ipv4.address }}"
+ipsec_subnet: 10.7.0.0/24
+
+ipsec_ikev1_split_include: []
+  #- {{ ipsec_subnet }}
+
+#if xauth-eap does not works with you radius setup, you may want to change this to xauth-radius
+ipsec_ikev1_radius_rightauth2: "xauth-eap"
+
+ipsec_use_radius: false
+ipsec_radius_servers:
+  - host: 127.0.0.1
+    secret: some-radius-secret
+
+ipsec_dns_servers:
+   - 8.8.8.8
+   - 8.8.4.4
+
+ipsec_psk: ipsecworks
+ipsec_cert_source: "gen" #upload, local, remote
+#ipsec_pki_server: "{{ inventory_hostname }}"
+#ipsec_pki_db_path: "/opt/pki"
+ipsec_ca_common_name: 'VPN DeployPlaybook CA'
+ipsec_ca_cert: ""
+ipsec_server_cert: ""
+ipsec_server_key: ""
+
+ikev1_users: []
+
+ikev2_users: []
+#ikev_users:
+#  - username: "user1"
+#    password: "pass1"
+#  - username: "user2"
+#    password: "passw"
+
+ipsec_service_name: "{%if ansible_distribution == 'Ubuntu' %}strongswan{% else %}ipsec{% endif %}"
+
+ipsec_gen_ios8_profile: true
+ipsec_ios8_include_password: false
+

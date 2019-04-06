@@ -1,0 +1,148 @@
+---
+- name: Ensures dir exists on Minion(s)
+  file: 
+    path="{{ item }}"
+    state=directory
+  with_items:
+    - /etc/cni/net.d
+    - /opt/cni/bin
+    - /var/lib/kubelet
+    - /var/lib/kube-proxy
+    - /var/lib/kubernetes
+    - /var/run/kubernetes
+    - /usr/local/share/ca-certificates
+    - /etc/containerd
+
+- name: Copying pem files on minion(s)
+  template: 
+    src: "/tmp/{{ item }}"
+    dest: "/var/lib/kubelet/{{ item }}"
+  with_items:
+    - "{{ inventory_hostname }}-key.pem"
+    - "{{ inventory_hostname }}.pem"
+
+- name: Copying ca files on minion(s)
+  template: 
+    src: "/tmp/{{ item }}"
+    dest: "/var/lib/kubernetes/{{ item }}"
+    mode: 0600
+  with_items:
+    - ca.pem
+    - kubernetes-key.pem
+    - kubernetes.pem
+
+- name: Extra step to manage self signed CA
+  shell: openssl x509 -outform der -in /var/lib/kubernetes/ca.pem -out /usr/local/share/ca-certificates/kubernetes.crt
+
+#- name: Extra step to manage self signed CA = Moving crt to ca store
+#  copy: 
+#    src: "/tmp/kubernetes.crt"
+#    dest: "/usr/local/share/ca-certificates/"
+
+- name: Extra step to manage self signed CA = Updating ca-certs
+  shell: /usr/sbin/update-ca-certificates
+
+- name: Copying Kubelet config on minion(s)
+  template: 
+    src: "/tmp/{{ inventory_hostname }}.kubeconfig"
+    dest: "/var/lib/kubelet/kubeconfig"
+
+- name: Copying Kubelet config on minion(s) (kubelet-config.yaml)
+  template: 
+    src: "kubelet-config.yaml.j2"
+    dest: "/var/lib/kubelet/kubelet-config.yaml"
+
+- name: Copying Bridge files on minion(s)
+  template: 
+    src: "10-bridge-conf.j2"
+    dest: "/etc/cni/net.d/10-bridge.conf"
+
+- name: Copying Loopback files on minion(s)
+  template: 
+    src: "{{ role_path }}/files/99-loopback.conf"
+    dest: "/etc/cni/net.d/99-loopback.conf"
+
+- name: Copying containerd config files on minion(s)
+  template: 
+    src: "{{ role_path }}/files/config.toml"
+    dest: "/etc/containerd/config.toml"
+
+- name: Copying containerd service files on minion(s)
+  template: 
+    src: "{{ role_path }}/files/containerd.service"
+    dest: "/etc/systemd/system/containerd.service"
+
+- name: Copying Kube-proxy files on minion(s)
+  template: 
+    src: "/tmp/kube-proxy.kubeconfig"
+    dest: "/var/lib/kube-proxy/kubeconfig"
+
+- name: Copying Kube-proxy yaml config files on minion(s)
+  template: 
+    src: "kube-proxy-config.yaml.j2"
+    dest: "/var/lib/kube-proxy/kube-proxy-config.yaml"
+
+- name: Copying Services files on minion(s)
+  template: 
+    src: "kube-proxy-service.j2"
+    dest: "/etc/systemd/system/kube-proxy.service"
+
+- name: Copying Routes files on minion(s)
+  template: 
+    src: "add_route.j2"
+    dest: "/tmp/add_route"
+  when: announce_svc
+
+- name: Copying kube-ipvs0 cron check on minion(s)
+  template: 
+    src: "{{ role_path }}/files/check_dummy_state.sh"
+    dest: "/usr/local/bin/check_dummy_state.sh"
+  when: announce_svc
+
+- name: Copying Binaries files on minion(s)
+  synchronize: 
+    src: "/tmp/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+  with_items:
+    - kubectl
+    - kube-proxy
+    - kubelet
+    - runc.amd64
+    - runsc
+
+- name: Copying runc binary on minion(s)
+  synchronize: 
+    src: "/tmp/runc.amd64"
+    dest: "/usr/local/bin/runc"
+
+- name: Giving rights to binaries on minion(s)
+  file:
+    path: "/usr/local/bin/{{ item }}"
+    mode: 655
+  with_items:
+    - kubectl
+    - kube-proxy
+    - kubelet
+    - runc
+    - runsc
+    - check_dummy_state.sh
+
+- name: Copying Kubelet service on minion(s)
+  template: 
+    src: "kubelet-service.j2"
+    dest: "/etc/systemd/system/kubelet.service"
+
+- name: Copying Cni-plugins files on minion(s)
+  unarchive:
+    src: "/tmp/cni-plugins-amd64-{{ cni_plugin_version }}.tgz"
+    dest: "/opt/cni/bin"
+
+- name: Copying containerd files on minion(s)
+  unarchive: 
+    src: "/tmp/containerd-{{ containerd_version }}.linux-amd64.tar.gz"
+    dest: "/"
+
+- name: Copying crictl files on minion(s)
+  unarchive: 
+    src: "/tmp/crictl-{{ cri_tools_version }}-linux-amd64.tar.gz"
+    dest: "/usr/local/bin"

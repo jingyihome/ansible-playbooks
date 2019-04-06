@@ -1,0 +1,5 @@
+---
+# Application war file name
+war_name: devopschallenge.war
+# Application Root path
+war_root_dir: /opt/apache-tomcat-8.5.16/webapps

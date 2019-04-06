@@ -1,0 +1,65 @@
+---
+#freeradius
+
+- name: install freeradius
+  apt: pkg={{ item }} state=installed
+  with_items:
+    - freeradius
+    - freeradius-mysql
+    - freeradius-utils
+  tags: freeradius 
+
+- name: create freeradius database
+  mysql_db: name={{ freeradius_db_name }} collation=utf8_general_ci encoding=utf8 
+            login_user=root login_password={{ mysql_root_password }}
+  tags: freeradius 
+
+- name: setup freeradius database user
+  mysql_user: name={{ freeradius_db_user }} password={{ freeradius_db_password }} priv={{ freeradius_db_name }}.*:ALL state=present
+              login_user=root login_password={{ mysql_root_password }}
+  tags: freeradius 
+
+- name: upload add_radusergroup_id.sql
+  copy: src=add_radusergroup_id.sql dest=/etc/freeradius/sql/mysql/add_radusergroup_id.sql
+
+- name: create tables 
+  action: shell mysql -u{{ freeradius_db_user }} -p{{ freeradius_db_password }} {{ freeradius_db_name }} < /etc/freeradius/sql/mysql/{{ item }}
+  ignore_errors: True
+  with_items:
+    - schema.sql
+    - nas.sql
+    - ippool.sql
+    - wimax.sql
+    - add_radusergroup_id.sql
+  tags: freeradius 
+
+#upload config files
+- name: install config files 
+  template: src={{ item }}  dest=/etc/freeradius/{{ item }}
+  with_items:
+    - radiusd.conf
+    - sites-available/vpn_auth
+    - sql.conf
+    - clients.conf
+    - sql/mysql/dialup_customize.conf
+  notify: 
+    - restart freeradius
+  tags: 
+    - freeradius
+    - config
+
+- name: disable default
+  file: path=/etc/freeradius/sites-enabled/default state=absent
+  notify: 
+    - restart freeradius
+  tags: 
+    - freeradius
+    - config
+
+- name: enable vpn_auth
+  file: src=/etc/freeradius/sites-available/vpn_auth dest=/etc/freeradius/sites-enabled/vpn_auth state=link
+  notify: 
+    - restart freeradius
+  tags: 
+    - freeradius
+    - config

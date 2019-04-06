@@ -1,0 +1,6 @@
+---
+- name: Installing kubefw to implement network_policies
+  command: kubectl apply -f {{ kubefw_deploy }}
+  when: network_policies
+  delegate_to: "{{ groups['masters'][0] }}"
+

@@ -1,0 +1,30 @@
+---
+# tasks file for squid-helper
+
+- name: ensure working dir exists
+  file: path={{ squid2radius_dir }} state=directory
+
+- name: clone squid2radius repo
+  git: repo="{{ squid2radius_repo }}"
+       version="{{ squid2radius_version }}"
+       dest="{{ squid2radius_dir }}"
+       force=yes
+
+- name: install depdency
+  pip: name={{ item }} state=present
+       virtualenv={{ squid_helper_venv }}
+  with_items: 
+    - pyrad
+    - hurry.filesize
+
+- name: setup cron job for squid2radius
+  cron: name="squid2radius"
+        job="{{ squid2radius_cmd }}"
+        special_time="{{ squid2radius_cron_interval }}"
+        state=present
+        user="root"
+        cron_file="squid2radius"
+
+- name: run squid2raidus now
+  shell: "{{ squid2radius_cmd }}"
+  when: squi2radius_run_now

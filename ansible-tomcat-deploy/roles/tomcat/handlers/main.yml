@@ -1,0 +1,5 @@
+---
+- name: restart tomcat service
+  command: nohup /opt/apache-tomcat-8.5.16/bin/startup.sh
+  become: true
+  become_user: tomcat

@@ -1,0 +1,19 @@
+---
+#setup nginx
+
+- name: install nginx
+  action: apt package=nginx state=present
+  tags:
+    - nginx
+
+- name: start nginx
+  action: service name=nginx state=started enabled=yes
+  tags:
+    - nginx
+
+- name: disable default nginx config
+  action: file path=/etc/nginx/sites-enabled/default state=absent
+  tags: 
+    - nginx
+  notify:
+    - restart nginx

@@ -1,0 +1,19 @@
+---
+- name: bootstrap a centos7 server
+  hosts: all
+  become: yes
+  become_user: root
+  vars_files:
+    - group_vars/all.yml
+    - group_vars/vault.yml
+
+  roles:
+    - { role: user, tags: ['user'] }
+    - { role: ssh, tags: ['ssh'] }
+    - { role: packages, tags: ['packages'] }
+    - { role: motd, tags: ['motd'] }
+    - { role: fail2ban, tags: ['fail2ban'] }
+    - { role: firewall, tags: ['firewall'] }
+    - { role: mail, tags: ['mail'] }
+    - { role: yum-cron, tags: ['yum-cron'] }
+    - { role: libvirt-kvm, tags: ['libvirt-kvm'] }

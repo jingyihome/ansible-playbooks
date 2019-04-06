@@ -1,0 +1,42 @@
+---
+- name: Ensures dir exists on database servers
+  file: 
+    path="{{ item }}"
+    state=directory
+  with_items:
+    - /etc/etcd
+    - /var/lib/etcd
+    - /usr/local/share/ca-certificates
+
+- name: Copying cert files on database servers
+  template: 
+    src: "/tmp/{{ item }}"
+    dest: "/etc/etcd/{{ item }}"
+    mode: 0600
+  with_items:
+    - ca.pem
+    - kubernetes-key.pem
+    - kubernetes.pem
+
+- name: Extra step to manage self signed CA
+  shell: openssl x509 -outform der -in /etc/etcd/ca.pem -out /usr/local/share/ca-certificates/kubernetes.crt
+
+#- name: Extra step to manage self signed CA = Moving crt to ca store
+#  copy: 
+#    src: "/tmp/kubernetes.crt"
+#    dest: "/usr/local/share/ca-certificates/"
+
+- name: Extra step to manage self signed CA = Updating ca-certs
+  shell: /usr/sbin/update-ca-certificates
+
+- name: Copying etcd binary files on database servers
+  unarchive: 
+    src: "/tmp/etcd-{{ etcd_version }}-linux-amd64.tar.gz"
+    dest: "/usr/local/bin"
+    extra_opts: [--strip-components=1]
+
+
+- name: Copying etcd service file on database servers
+  template: 
+    src: "etcd-service.j2"
+    dest: "/etc/systemd/system/etcd.service"

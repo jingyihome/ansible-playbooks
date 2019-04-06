@@ -1,0 +1,16 @@
+{
+  "CN": "system:node:{{ worker_node }}",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "{{ country }}",
+      "L": "{{ locality }}",
+      "O": "system:nodes",
+      "OU": "{{ organizationalUnit }}",
+      "ST": "{{ state }}"
+    }
+  ]
+}

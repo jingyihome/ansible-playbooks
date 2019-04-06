@@ -1,0 +1,10 @@
+.vagrant
+log
+.tags
+.tags*
+.venv
+*.retry
+*junit-report.xml
+__pycache__
+credentials
+docs/_build

@@ -1,0 +1,11 @@
+[masters]
+server0[1:2]
+
+[workers]
+server0[3:4]
+
+[admin_machines]
+oob-mgmt-server
+
+[databases]
+server0[1:2]

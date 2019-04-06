@@ -1,0 +1,8 @@
+---
+
+- hosts: sigmavpn
+  
+  roles:
+    - common
+    - libsodium
+    - sigmavpn

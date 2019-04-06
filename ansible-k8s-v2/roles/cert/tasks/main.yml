@@ -1,0 +1,41 @@
+- name: install wget
+  yum:
+    name: wget
+    state: latest
+
+- name: get binaries
+  get_url:
+    url: "{{ item.name }}"
+    dest: "{{ item.fn }}"
+    mode: 0550
+  with_items:
+  - { name: 'https://pkg.cfssl.org/R1.2/cfssl_linux-amd64', fn: '/usr/local/bin/cfssl' }
+  - { name: 'https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64', fn: '/usr/local/bin/cfssljson' }
+
+- name: copy template certificate files
+  template: 
+    src: "{{ item }}.j2"
+    dest: "/root/{{ item }}"
+    owner: root
+    group: root
+    mode: 0440
+  with_items:
+    - ca-config.json
+    - ca-csr.json
+    - kubernetes-csr.json
+  environment:
+    KUBERNETES_PUBLIC_IP_ADDRESS: "{{ kubernetes_public_ip }}"  
+
+- name: create ca certificate
+  shell: /usr/local/bin/cfssl gencert -initca /root/ca-csr.json | /usr/local/bin/cfssljson -bare ca
+  args:
+    creates: /root/ca-key.pem
+    chdir: /root
+
+- name: create client certificate
+  shell: /usr/local/bin/cfssl gencert -ca=/root/ca.pem -ca-key=/root/ca-key.pem -config=/root/ca-config.json -profile=kubernetes /root/kubernetes-csr.json | /usr/local/bin/cfssljson -bare kubernetes
+  environment:
+    KUBERNETES_PUBLIC_IP_ADDRESS: "{{ kubernetes_public_ip }}"  
+  args:
+    creates: /root/kubernetes-key.pem
+    chdir: /root

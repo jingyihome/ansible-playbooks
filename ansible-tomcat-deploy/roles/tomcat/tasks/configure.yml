@@ -1,0 +1,34 @@
+---
+- name: Install Java - {{ java_package }}
+  yum:
+    name: "{{ java_package }}"
+    state: present
+
+- name: Install unzip
+  yum:
+    name: unzip
+    state: present
+
+- name: add group "tomcat"
+  group: name=tomcat
+
+- name: add user "tomcat"
+  user: name=tomcat group=tomcat createhome=yes
+  become: true
+
+- name: copy Tomcat
+  copy: src=apache-tomcat-8.5.16.zip dest=/opt/apache-tomcat-8.5.16.zip
+
+- name: Extract Tomcat archive
+  command: unzip -o /opt/apache-tomcat-8.5.16.zip -d /opt/
+
+- name: Change ownership of Tomcat installation
+  file: path=/opt/apache-tomcat-8.5.16 owner=tomcat group=tomcat state=directory recurse=yes
+
+- name: Change permission of Tomcat installation
+  file: path=/opt/apache-tomcat-8.5.16 state=directory mode=0755 recurse=yes
+
+- name: Start Tomcat
+  command: nohup /opt/apache-tomcat-8.5.16/bin/startup.sh
+  become: true
+  become_user: tomcat

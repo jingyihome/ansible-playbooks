@@ -1,0 +1,42 @@
+---
+# Global variables that can 
+# be included in a task with 
+#  include_vars: "{{ playbook_dir }}/config.yaml"
+################################################
+
+#
+## Versions of components
+#
+k8s_version: v1.13.4
+etcd_version: v3.3.12
+cni_plugin_version: v0.7.5
+cri_tools_version: v1.13.0
+runc_version: v1.0.0-rc6
+containerd_version: 1.2.5
+istio_version: 1.0.2
+#
+## Essential network variables ##
+#
+master_ip: 88.88.88.88  # Also known as API Endpoint
+add_dummy0_master_ip: True #If you're using BGP to announce your api server address
+service_ip: 85.85.0.0/16 # Why 85 ? Because it looks like 8s in k8s ;-)
+announce_svc: True # If you use FRR/bgpd, you can automatically announce service IPs on workers
+dns_addon: True #Or false if you don't want the DNS cluster add-on. NEW: coreDNS will be installed instead of Kube-Dns
+cluster_dns: 85.85.85.85
+cluster_domain: cluster.local # Not totally supported for now
+cluster_cidr: 172.16.0.0/16
+proxy_mode: ipvs #ipvs or iptables
+install_docker_ce: False #Docker replaced by containerd/runc
+install_istio: False # Istio 0.8.0 is clearly not production ready -> Have to bump to v1.0 to try
+network_policies: True #Use of kubefw to be able to leverage Network policies
+kubefw_deploy: https://raw.githubusercontent.com/jpmondet/kubefw/master/k8s-deploy.yaml
+#
+## Misc for certificates
+#
+cluster_name: MyK8sCluster
+country: the
+locality: automated
+organization: way
+organizationalUnit : in
+state: ansible
+

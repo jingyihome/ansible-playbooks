@@ -1,0 +1,24 @@
+---
+- name: Install kubernetes
+  hosts: all
+  remote_user: roderick
+  become: yes
+
+  roles:
+    - common
+
+- name: Install k8s-master
+  hosts: k8s-master
+  remote_user: roderick
+  become: yes
+
+  roles:
+    - k8s-master
+
+- name: Install k8s-nodes
+  hosts: k8s-nodes
+  remote_user: roderick
+  become: yes
+
+  roles:
+    - k8s-nodes

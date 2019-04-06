@@ -1,0 +1,6 @@
+---
+nginx_ssl_certificate_subject: "/C=UK/ST=Scotland/L=Dundee/O=OME/CN={{ ansible_fqdn }}"
+nginx_ssl_certificate_days: 365
+nginx_ssl_certificate: /etc/nginx/ssl/server.crt
+nginx_ssl_certificate_key: /etc/nginx/ssl/server.key
+nginx_url: http://nginx.org/packages/centos/7/noarch/RPMS/nginx-release-centos-7-0.el7.ngx.noarch.rpm

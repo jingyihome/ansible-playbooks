@@ -1,0 +1,65 @@
+---
+- name: Add kernel modules for ipvs
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - ip_vs
+    - ip_vs_sh
+    - ip_vs_rr
+    - ip_vs_wrr
+    - nf_conntrack_ipv4
+
+- name: Install Dependencies
+  apt:
+    name: "{{ item }}"
+  with_items:
+    - socat
+    - conntrack
+    - ipset
+    - ipvsadm
+
+- name: Get keys of docker-ce repo  
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg 
+    state: present
+
+- name: Add repo
+  shell: sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+
+- name: Apt update/upgrade
+  apt:
+    update_cache: yes
+
+- name: Install docker-CE
+  apt:
+    name: docker-ce
+  when: install_docker_ce
+
+- name: daemon_reload
+  systemd: 
+    daemon_reload: yes
+
+- name: Start services
+  service: 
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  with_items:
+    - containerd
+    - kubelet
+    - kube-proxy
+    #- cri-containerd # Not used anymore
+
+- name: Announce services thanks to FRR/bgpd
+  command: vtysh -f /tmp/add_route
+  when: announce_svc and proxy_mode == 'iptables'
+
+- name: Up the dummyz when using ipvs
+  command: ip link set kube-ipvs0 up
+  when: proxy_mode == 'ipvs'
+  ignore_errors: yes
+
+- cron:
+    name: "Check the dummy is still up"
+    job: "sudo /usr/local/bin/check_dummy_state.sh"

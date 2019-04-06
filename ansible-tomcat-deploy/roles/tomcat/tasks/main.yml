@@ -1,0 +1,6 @@
+---
+# tasks file for tomcat
+#
+#
+- include: configure.yml
+- include: service.yml

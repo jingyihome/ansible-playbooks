@@ -1,0 +1,5 @@
+---
+- include_vars: "{{ playbook_dir }}/host_vars/global_vars.yaml"
+- include_tasks: kube-dns.yaml
+- include_tasks: istio.yaml
+- include_tasks: network_policies.yaml

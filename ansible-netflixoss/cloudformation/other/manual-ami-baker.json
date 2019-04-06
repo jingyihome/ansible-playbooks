@@ -1,0 +1,205 @@
+{
+  "AWSTemplateFormatVersion":"2010-09-09",
+  "Description":"A manual AMI baker instance - by Answers for AWS",
+  "Parameters":{
+    "InstanceType":{
+      "Description":"Type of EC2 instances to launch",
+      "Type":"String",
+      "Default":"t1.micro",
+      "AllowedValues" : [ "t1.micro", "m1.small", "m1.medium", "m1.large", "m1.xlarge", "m2.xlarge", "m2.2xlarge", "m2.4xlarge", "m3.xlarge", "m3.2xlarge", "c1.medium", "c1.xlarge", "cg1.4xlarge" ],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+    "KeyName":{
+      "Description":"The EC2 Key Pair to allow SSH access to the instances",
+      "Type":"String",
+      "MinLength": "1",
+      "MaxLength": "64",
+      "AllowedPattern" : "[-_ a-zA-Z0-9]*",
+      "ConstraintDescription" : "can contain only alphanumeric characters, spaces, dashes and underscores."
+    }
+  },
+  
+  "Mappings":{
+    "AWSRegion2AMI":{
+      "us-east-1":{
+        "ami":"ami-69f5a900"
+      },
+      "us-west-1":{
+        "ami":"ami-ecd8efa9"
+      },
+      "us-west-2":{
+        "ami":"ami-30079e00"
+      },
+      "eu-west-1":{
+        "ami":"ami-e21dfd95"
+      },
+      "sa-east-1":{
+        "ami":"ami-5bac0a46"
+      },
+      "ap-southeast-1":{
+        "ami":"ami-76134624"
+      },
+      "ap-southeast-2":{
+        "ami":"ami-cd8b17f7"
+      },
+      "ap-northeast-1":{
+        "ami":"ami-c933a8c8"
+      }
+    }
+  },
+  
+  "Resources" : {
+    "IamRole":{
+      "Type":"AWS::IAM::Role",
+      "Properties":{
+        "AssumeRolePolicyDocument":{
+          "Statement":[
+            {
+              "Effect":"Allow",
+              "Principal":{
+                "Service":[
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action":[
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path":"/",
+        "Policies":[
+          {
+            "PolicyName":"Policy",
+            "PolicyDocument":{
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ec2:AttachVolume",
+                    "ec2:CopyImage",
+                    "ec2:CopySnapshot",
+                    "ec2:CreateImage",
+                    "ec2:CreateSnapshot",
+                    "ec2:CreateTags",
+                    "ec2:CreateVolume",
+                    "ec2:DeleteSnapshot",
+                    "ec2:DeleteTags",
+                    "ec2:DeleteVolume",
+                    "ec2:DetachVolume",
+                    "ec2:ModifyImageAttribute",
+                    "ec2:ModifySnapshotAttribute",
+                    "ec2:ModifyVolumeAttribute",
+                    "ec2:RegisterImage",
+                    "ec2:ResetImageAttribute",
+                    "ec2:ResetSnapshotAttribute",
+                    "ec2:Describe*"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "InstanceProfile":{
+      "Type":"AWS::IAM::InstanceProfile",
+      "Properties":{
+        "Path":"/",
+        "Roles":[
+          {
+            "Ref":"IamRole"
+          }
+        ]
+      }
+    },
+    
+    "Instance":{
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "IamInstanceProfile":{
+          "Ref":"InstanceProfile"
+        },
+        "ImageId":{
+          "Fn::FindInMap":[
+            "AWSRegion2AMI",
+            {
+              "Ref":"AWS::Region"
+            },
+            "ami"
+          ]
+        },
+        "InstanceType":{ "Ref": "InstanceType" },
+        "KeyName":{
+          "Ref":"KeyName"
+        },
+        "SecurityGroupIds": [ { "Ref": "SecurityGroup" } ],
+        "Tags" : [ {
+          "Key" : "Name",
+          "Value" : "amibaker"
+        } ],
+        "UserData":{
+          "Fn::Base64":{
+            "Fn::Join":[
+              "\n",
+              [
+                "#!/bin/bash",
+                "apt-get update",
+                "apt-get install -y git-core",
+                "sudo -u ubuntu -H -i git clone https://github.com/Answers4AWS/netflixoss-ansible.git"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    
+    "SecurityGroup":{
+      "Type":"AWS::EC2::SecurityGroup",
+      "Properties":{
+        "GroupDescription":"Access to manual AMI baker",
+        "SecurityGroupIngress":[
+          {
+            "IpProtocol":"tcp",
+            "FromPort":"22",
+            "ToPort":"22",
+            "CidrIp":"0.0.0.0/0"
+          }
+        ]
+      }
+    }
+  },
+  
+  "Outputs":{
+    "step001":{
+      "Description":"Step 1: SSH to this instance using your KeyPair",
+      "Value":{
+        "Fn::Join":[
+          "",
+          [
+            "ssh -i ",
+            {
+              "Ref":"KeyName"
+            },
+            ".pem ubuntu@",
+            {
+              "Fn::GetAtt":[
+                "Instance",
+                "PublicDnsName"
+              ]
+            }
+          ]
+        ]
+      }
+    },
+    "step002":{
+      "Description":"Step 2: Create a Foundation EBS volume",
+      "Value":"./netflixoss-ansible/foundation-ami/ubuntu/foundation-create-volume"
+    },
+    "step003":{
+      "Description":"Step 3: Create your Foundation AMI from the Foundation EBS volume",
+      "Value":"./netflixoss-ansible/foundation-ami/ubuntu/foundation-create-ami"
+    }
+  }
+}

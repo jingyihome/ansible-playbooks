@@ -1,0 +1,61 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: docker
+lint:
+  name: yamllint
+  options:
+    config-file: molecule/yamllint.yml
+platforms:
+  # to define DNS server please use only ns. The other ones are overloaded
+  # for testing purposes in the create.yml
+  - name: single
+    groups:
+      - mail
+      - mta
+      - reverse_proxy
+      - mda
+      - db
+      - test
+    image: minimum2scp/systemd-stretch
+    privileged: true
+    command: /sbin/init
+    networks:
+      - name: external
+
+  - name: ns
+    image: hugoshaka/dnsmasq-ansible-mailserver
+    privileged: true
+    command: --conf-file=/etc/dnsmasq.conf
+    networks:
+      - name: external
+
+provisioner:
+  name: ansible
+  env:
+    ANSIBLE_ROLES_PATH: ../../roles
+  inventory:
+    links:
+      group_vars: ../../group_vars/single
+      host_vars: ../../host_vars/test-single
+  playbooks:
+    create: ../create.yml
+    converge: ../playbook.yml
+    prepare: ../prepare.yml
+  lint:
+    name: ansible-lint
+scenario:
+  name: single
+verifier:
+  name: testinfra
+  directory: ../../test/suite/
+  options:
+    junit-xml: junit-report.xml
+    host: single
+    verbosity: 2
+  lint:
+    name: flake8
+    options:
+      max-line-length: 88
+...

@@ -1,0 +1,4 @@
+---
+# handlers file for nginx
+- name: restart the server
+  service: name=nginx state=restarted

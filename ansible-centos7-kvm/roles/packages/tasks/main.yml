@@ -1,0 +1,7 @@
+---
+- name: packages | upgrade packages to the latest version
+  yum: name=* state=latest update_cache=yes
+
+- name: packages | install required packages
+  yum: name={{ item }} state=latest 
+  with_items: "{{ DEFAULT_PACKAGES }}"

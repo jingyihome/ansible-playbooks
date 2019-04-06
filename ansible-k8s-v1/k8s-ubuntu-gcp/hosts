@@ -1,0 +1,5 @@
+[k8s-nodes]
+lfs258-worker ansible_ssh_host=lfs258-worker
+
+[k8s-master]
+lfs258-master ansible_ssh_host=lfs258-master

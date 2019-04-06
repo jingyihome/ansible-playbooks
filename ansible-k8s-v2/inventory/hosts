@@ -1,0 +1,15 @@
+[init]
+k8s-mstr1
+
+[masters]
+k8s-mstr[1:2]
+
+[minions]
+k8s-kube[1:2]
+
+[dbservers]
+k8s-data[1:3]
+
+[randomservers]
+k8s-rand[1:3]
+

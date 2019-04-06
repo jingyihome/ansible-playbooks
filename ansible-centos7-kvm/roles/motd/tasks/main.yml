@@ -1,0 +1,9 @@
+---
+- name: motd | install custom issue.net
+  copy: src=issue.net dest=/etc/issue.net owner=root group=root mode=0644
+
+- name: motd | install custom figlet font for motd
+  copy: src=basic.flf dest=/usr/share/figlet/basic.flf owner=root group=root mode=0644
+
+- name: motd | install custom motd
+  copy: src=motd.sh dest=/etc/profile.d/motd.sh owner=root group=root mode=0644

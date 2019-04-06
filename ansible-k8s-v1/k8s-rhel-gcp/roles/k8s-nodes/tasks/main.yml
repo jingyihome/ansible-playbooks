@@ -1,0 +1,15 @@
+---
+- name: Copy kubeadm-join to k8s-nodes
+  copy:
+    src: kubeadm-init.out
+    dest: kubeadm-init.out
+
+- stat: path=/etc/kubernetes/kubelet.conf
+  register: kubeletconf
+
+- name: Extract command from kubeadm-init.out
+  shell: grep "kubeadm join" kubeadm-init.out > kubeadm-join
+
+- name: Execute join command to connect to master
+  shell: /bin/bash kubeadm-join
+  when: not kubeletconf.stat.exists

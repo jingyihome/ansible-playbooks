@@ -1,0 +1,59 @@
+---
+- name: Adding netaddr via pip for ipaddr filter
+  pip:
+    name: netaddr
+
+- name: Get prequisites
+  get_url:
+    url: "{{ item }}"
+    dest: /tmp/
+  with_items: 
+    - "https://pkg.cfssl.org/R1.2/cfssl_linux-amd64"
+    - "https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64"
+    - "https://storage.googleapis.com/kubernetes-release/release/{{ k8s_version }}/bin/linux/amd64/kubectl"
+    - "https://storage.googleapis.com/kubernetes-release/release/{{ k8s_version }}/bin/linux/amd64/kube-apiserver"
+    - "https://storage.googleapis.com/kubernetes-release/release/{{ k8s_version }}/bin/linux/amd64/kube-controller-manager"
+    - "https://storage.googleapis.com/kubernetes-release/release/{{ k8s_version }}/bin/linux/amd64/kube-scheduler"
+    - "https://storage.googleapis.com/kubernetes-release/release/{{ k8s_version }}/bin/linux/amd64/kube-proxy"
+    - "https://storage.googleapis.com/kubernetes-release/release/{{ k8s_version }}/bin/linux/amd64/kubelet"
+    - "https://github.com/coreos/etcd/releases/download/{{ etcd_version }}/etcd-{{ etcd_version }}-linux-amd64.tar.gz"
+    - "https://github.com/containernetworking/plugins/releases/download/{{ cni_plugin_version }}/cni-plugins-amd64-{{ cni_plugin_version }}.tgz"
+    #- "https://github.com/kubernetes-incubator/cri-containerd/releases/download/v1.0.4/cri-containerd-1.0.4.linux-amd64.tar.gz"
+    - "https://github.com/kubernetes-incubator/cri-tools/releases/download/{{ cri_tools_version }}/crictl-{{ cri_tools_version }}-linux-amd64.tar.gz"
+    - "https://github.com/opencontainers/runc/releases/download/{{ runc_version }}/runc.amd64"
+    - "https://github.com/containerd/containerd/releases/download/v{{ containerd_version }}/containerd-{{ containerd_version }}.linux-amd64.tar.gz"
+    - "https://storage.googleapis.com/kubernetes-the-hard-way/kube-dns.yaml"
+    - "https://storage.googleapis.com/kubernetes-the-hard-way/runsc"
+    - "https://github.com/istio/istio/releases/download/{{ istio_version }}/istio-{{ istio_version }}-linux.tar.gz"
+  tags: pre
+
+- name: Giving rights to execute files
+  file:
+    path: "/tmp/{{ item }}"
+    mode: "u+x"
+  with_items: 
+    - cfssl_linux-amd64
+    - cfssljson_linux-amd64
+    - kubectl
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler
+    - runsc
+    - runc.amd64
+  tags: pre
+
+- name: Copying admin files to bin
+  copy:
+    src: "/tmp/{{ item }}"
+    dest: /usr/local/bin/
+    mode: "u+x"
+  with_items:
+    - kubectl
+    - cfssl_linux-amd64
+    - cfssljson_linux-amd64
+  tags: pre
+
+- name: Install Rsync to copy large files on the right targets
+  apt:
+    name: rsync
+  tags: pre

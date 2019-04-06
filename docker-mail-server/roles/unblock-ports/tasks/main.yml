@@ -1,0 +1,22 @@
+---
+# Based on README at https://github.com/hardware/mailserver
+- name: unblock the needed ports
+  ufw: rule=allow port={{ item }} proto=tcp
+  with_items:
+  - 25
+  - 53
+  - 80
+  - 110
+  - 143
+  - 443
+  - 465
+  - 587
+  - 993
+  - 995
+  - 1194
+  - 4190
+- name: unblock the needed ports for UDP
+  ufw: rule=allow port={{ item }} proto=udp
+  with_items:
+  - 53
+  - 1194

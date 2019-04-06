@@ -1,0 +1,7 @@
+---
+- name: kvm | packages | upgrade packages to the latest version
+  yum: name=* state=latest update_cache=yes
+
+- name: kvm | packages | install required packages
+  yum: name={{ item }} state=latest 
+  with_items: "{{ KVM_PACKAGES }}"

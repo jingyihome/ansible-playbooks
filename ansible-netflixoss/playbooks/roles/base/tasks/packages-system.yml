@@ -1,0 +1,55 @@
+---
+# Install some helpful system packages
+
+- name: Install system packages (apt version)
+  apt: pkg={{ item }} state=latest
+  with_items:
+    - git-core
+    - less
+    - perl
+    - perl-modules
+    - python
+    - python-support
+    - python-pip
+    - sudo
+    - sysstat
+    - unzip
+    - xfsprogs
+    - zip
+  when: ansible_distribution == 'Ubuntu'
+
+- name: Install system packages (yum version)
+  yum: pkg={{ item }} state=latest
+  with_items:
+    - git
+    - less
+    - perl
+    - python
+    - python-pip
+    - sudo
+    - unzip
+    - xfsprogs
+    - zip
+  when: ansible_distribution == 'Amazon'
+
+- name: Install boto Python library
+  pip: name=boto state=latest
+
+- name: Install AWS CLI
+  pip: name=awscli state=latest
+
+- name: Install s3get to be used by user-data on boot
+  copy: src=s3get dest=/usr/bin/s3get owner=root group=root mode=0755
+
+# Get the super handy ec2metadata script over there
+- name: Copy ec2metadata script
+  copy: src={{ ansible_distribution }}/ec2metadata dest=/usr/bin/ec2metadata owner=root group=root mode=0755
+  when: ansible_distribution == 'Amazon'
+  tags: ec2metadata
+
+- name: Copy rc.local template
+  copy: src={{ ansible_distribution }}/rc.local dest={{ rc_local_path }}  owner=root group=root mode=0755
+  
+- name: Get cloud-init to manage hosts file
+  lineinfile: 'dest=/etc/cloud/cloud.cfg state=present line="manage_etc_hosts: True" regexp="^manage_etc_hosts\: True" insertafter="^preserve_hostname"'
+  tags: cloud-init

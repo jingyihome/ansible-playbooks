@@ -1,0 +1,11 @@
+---
+- name: firewall | start and enable firewalld
+  systemd: name=firewalld state=started enabled=yes
+
+- name: firewall | set the dmz zone as defaultk
+  command: firewall-cmd --set-default-zone=public
+
+- name: firewall | put the nic interface in the public zone
+  command: firewall-cmd --zone=public --add-interface={{ item }}
+  with_items: "{{ PUBLIC_INTERFACES }}"
+  notify: reload firewalld

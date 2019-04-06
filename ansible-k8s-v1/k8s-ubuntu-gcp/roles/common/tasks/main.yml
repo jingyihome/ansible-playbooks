@@ -1,0 +1,26 @@
+---
+  - name: Install docker.io
+    apt: 
+      name: docker.io
+      state: present
+      update_cache: yes
+
+  - name: Add an Apt key
+    apt_key: url=https://packages.cloud.google.com/apt/doc/apt-key.gpg state=present
+  
+  - name: kubernetes repository list
+    apt_repository:
+      repo: 'deb http://apt.kubernetes.io/  kubernetes-xenial   main'
+      state: present
+      filename: kubernetes.list
+      update_cache: yes 
+
+  - name: Install kubeadm
+    apt: 
+      name: ['kubeadm=1.13.4-00', 'kubelet=1.13.4-00', 'kubectl=1.13.4-00', 'kubernetes-cni=0.6.0-00']
+      state: present
+
+  - name: Install tree
+    apt: 
+      name: ['tree']
+      state: present

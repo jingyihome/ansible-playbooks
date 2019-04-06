@@ -1,0 +1,240 @@
+version: '2.1'
+
+services:
+  mailserver:
+{% if use_stable_release %}
+    image: hardware/mailserver:1.1-stable
+{% else %}
+    image: hardware/mailserver:1.1-latest
+{% endif %}
+    container_name: mailserver
+    domainname: {{ domain_name }}                  # Mail server A/MX/FQDN & reverse PTR = mail.{{ domain_name }}.
+    hostname: mail
+    restart: on-failure
+    # extra_hosts:                          - Required for external database (on other server or for local databases on host without docker)
+    #  - "mariadb:xx.xx.xx.xx"              - Replace with IP address of MariaDB server
+    #  - "redis:xx.xx.xx.xx"                - Replace with IP address of Redis server
+    ports:
+      - "25:25"       # SMTP                - Required
+    # - "110:110"     # POP3       STARTTLS - Optional - For webmails/desktop clients
+      - "143:143"     # IMAP       STARTTLS - Optional - For webmails/desktop clients
+    # - "465:465"     # SMTPS      SSL/TLS  - Optional - Enabled for compatibility reason, otherwise disabled
+      - "587:587"     # Submission STARTTLS - Optional - For webmails/desktop clients
+      - "993:993"     # IMAPS      SSL/TLS  - Optional - For webmails/desktop clients
+    # - "995:995"     # POP3S      SSL/TLS  - Optional - For webmails/desktop clients
+      - "4190:4190"   # SIEVE      STARTTLS - Optional - Recommended for mail filtering
+    environment:
+      - DBPASS={{ user_password }}                      # MariaDB database password (required)
+      - RSPAMD_PASSWORD={{ rspamd_password }}             # Rspamd WebUI password (required)
+    # - ADD_DOMAINS=aa.tld, www.bb.tld...   # Add additional domains separated by commas (needed for dkim keys etc.)
+    # - ENABLE_POP3=true                    # Enable POP3 protocol
+    # - ENABLE_FETCHMAIL=true               # Enable fetchmail forwarding
+    # - DISABLE_CLAMAV=true                 # Disable virus scanning
+    # - DISABLE_SIGNING=true                # Disable DKIM/ARC signing
+    # - DISABLE_GREYLISTING=true            # Disable greylisting policy
+    # - DISABLE_RATELIMITING=true           # Disable ratelimiting policy
+      - RELAY_NETWORKS=172.16.0.0/12        # Includes the docker-compose default network
+{% if pgp_encrypt_emails %}
+      - ENABLE_ENCRYPTION=true              # See https://github.com/hardware/mailserver#enable-automatic-gpg-encryption
+{% endif %}
+    #
+    # Full list : https://github.com/hardware/mailserver#environment-variables
+    #
+    volumes:
+      - /mnt/docker/mail:/var/mail
+{% if not self_signed_certs %}
+      - /mnt/docker/nginx/certs:/etc/letsencrypt
+{% endif %}
+    depends_on:
+      - mariadb
+      - redis
+
+  # Administration interface
+  # https://github.com/hardware/postfixadmin
+  # http://postfixadmin.sourceforge.net/
+  # Configuration : https://github.com/hardware/mailserver/wiki/Postfixadmin-initial-configuration
+  postfixadmin:
+    image: hardware/postfixadmin
+    container_name: postfixadmin
+    domainname: {{ domain_name }}
+    hostname: mail
+    restart: on-failure
+    environment:
+      - DBPASS={{ user_password }}
+    depends_on:
+      - mailserver
+      - mariadb
+
+  # Webmail (Optional)
+  # https://github.com/hardware/rainloop
+  # https://www.rainloop.net/
+  # Configuration : https://github.com/hardware/mailserver/wiki/Rainloop-initial-configuration
+  rainloop:
+    image: hardware/rainloop
+    container_name: rainloop
+    restart: on-failure
+    volumes:
+      - /mnt/docker/rainloop:/rainloop/data
+    depends_on:
+      - mailserver
+      - mariadb
+
+{% if www_is_wordpress %}
+  # Wordpress container setup
+  wordpress:
+    image: wordpress:4-php7.1-fpm-alpine
+    container_name: wordpress
+    depends_on:
+      - mariadb
+    restart: on-failure
+    links:
+      - mariadb:mysql
+    volumes:
+      - /mnt/docker/wordpress:/var/www/html
+      - /mnt/docker/php/custom.ini:/usr/local/etc/php/conf.d/custom.ini
+    environment:
+      - WORDPRESS_DB_PASSWORD={{ db_password }}
+
+{% else %}
+  # Contact Form (Optional)
+  # https://github.com/ksylvan/Simple-PHP-Contact-Form
+  contact:
+    image: kayvan/contact-form
+    container_name: contact
+    restart: on-failure
+    volumes:
+      - /mnt/docker/contact/config:/contact/config
+      - /mnt/docker/contact/ssmtp:/etc/ssmtp
+      - /mnt/docker/contact/index.php:/contact/index.php
+    depends_on:
+      - mailserver
+{% endif %}
+
+{% if use_opencart %}
+  # Opencart container setup
+  opencart:
+    image: bitnami/opencart:3
+    container_name: opencart
+    restart: on-failure
+    depends_on:
+      - mariadb
+    restart: on-failure
+    volumes:
+      - /mnt/docker/opencart:/bitnami
+    environment:
+      MARIADB_PASSWORD: '{{ db_password }}'
+      OPENCART_HOST: 'store.{{ domain_name }}'
+      OPENCART_USERNAME: '{{ opencart_user }}'
+      OPENCART_PASSWORD: '{{ opencart_password }}'
+      SMTP_HOST: mailserver
+      SMTP_PORT: 25
+      SMTP_USER: '{{ opencart_from }}'
+      SMTP_PASSWORD: 'should_be_ignored'
+{% endif %}
+
+{% if use_poweradmin %}
+  poweradmin:
+    image: secns/pdns
+    container_name: poweradmin
+    restart: on-failure
+    depends_on:
+      - mariadb
+    restart: on-failure
+    links:
+      - mariadb:db
+    volumes:
+      - /mnt/docker/poweradmin:/poweradmin
+    ports:
+    - "53:53"
+    - "53:53/udp"
+    environment:
+    - PDNS_ALLOW_AXFR_IPS=127.0.0.1
+    - PDNS_DISTRIBUTOR_THREADS=3
+    - PDNS_CACHE_TTL=20
+    - PDNS_RECURSIVE_CACHE_TTL=10
+    - DB_ENV_MYSQL_ROOT_PASSWORD={{ db_password }}
+{% endif %}
+
+{% if use_pritunl %}
+  pritunl:
+    image: 'jippi/pritunl:latest'
+    privileged: true
+    ports:
+      - '1194:1194/udp'
+      - '1194:1194/tcp'
+    volumes:
+      - '/mnt/docker/pritunl:/var/lib/pritunl'
+      - '/mnt/docker/mongo:/var/lib/mongodb'
+{% endif %}
+
+  # Web server
+  # https://github.com/Wonderfall/dockerfiles/tree/master/nginx
+  # https://nginx.org/
+  # Configuration : https://github.com/hardware/mailserver/wiki/Reverse-proxy-configuration
+  nginx:
+    image: wonderfall/boring-nginx
+    container_name: nginx
+    restart: on-failure
+    ports:
+      - "80:8000"
+      - "443:4430"
+    volumes:
+      - /mnt/docker/nginx/sites-enabled:/sites-enabled
+      - /mnt/docker/nginx/conf:/conf.d
+      - /mnt/docker/nginx/log:/var/log/nginx
+{% if self_signed_certs %}
+      - /mnt/docker/mail/ssl/selfsigned:/certs
+{% else %}
+      - /mnt/docker/nginx/certs:/certs
+{% endif %}
+      - /mnt/docker/www:/www
+{% if www_is_wordpress %}
+      - /mnt/docker/wordpress:/wordpress
+{% endif %}
+    depends_on:
+      - mailserver
+      - postfixadmin
+      - rainloop
+{% if use_opencart %}
+      - opencart
+{% endif %}
+{% if use_poweradmin %}
+      - poweradmin
+{% endif %}
+{% if use_pritunl %}
+      - pritunl
+{% endif %}
+{% if www_is_wordpress %}
+      - wordpress
+{% else %}
+      - contact
+{% endif %}
+
+  # Database
+  # https://github.com/docker-library/mariadb
+  # https://mariadb.org/
+  mariadb:
+    image: mariadb:10.1
+    container_name: mariadb
+    restart: on-failure
+    # Info : These variables are ignored when the volume already exists (databases created before).
+    environment:
+      - MYSQL_ROOT_PASSWORD={{ db_password }}
+      - MYSQL_DATABASE=postfix
+      - MYSQL_USER=postfix
+      - MYSQL_PASSWORD={{ user_password }}
+    volumes:
+      - /mnt/docker/mysql/db:/var/lib/mysql
+
+  # Cache Database
+  # https://github.com/docker-library/redis
+  # https://redis.io/
+  redis:
+    image: redis:3.2-alpine
+    container_name: redis
+    restart: on-failure
+    command: redis-server --appendonly yes
+    sysctls:
+      - net.core.somaxconn=1024
+    volumes:
+      - /mnt/docker/redis/db:/data

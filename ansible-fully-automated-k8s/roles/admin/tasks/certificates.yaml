@@ -1,0 +1,56 @@
+---
+- name: Preparing certificates files
+  template:
+    src: "{{ item }}.j2"
+    dest: "/tmp/{{ item }}.json"
+  with_items:
+    - ca-csr
+    - admin-csr
+    - kube-proxy-csr
+    - kubernetes-csr
+    - service-account-csr
+  tags: pre
+
+- name: Preparing certificates files of minions
+  template:
+    src: "node-csr.j2"
+    dest: "/tmp/{{ item }}-csr.json"
+  vars: 
+    worker_node: "{{ item }}"
+  with_items: 
+    - "{{ groups['workers'] }}"
+  tags: pre
+
+- name: Generating CA, Admin & kubeproxy certificates with cfssl
+  shell: "{{ item }}"
+  with_items:
+    - "cfssl_linux-amd64 gencert -initca /tmp/ca-csr.json | cfssljson_linux-amd64 -bare /tmp/ca"
+    - "cfssl_linux-amd64 gencert -ca=/tmp/ca.pem -ca-key=/tmp/ca-key.pem -config={{ role_path }}/files/ca-config.json -profile=kubernetes /tmp/admin-csr.json | cfssljson_linux-amd64 -bare /tmp/admin"
+    - "cfssl_linux-amd64 gencert -ca=/tmp/ca.pem -ca-key=/tmp/ca-key.pem -config={{ role_path }}/files/ca-config.json -profile=kubernetes /tmp/service-account-csr.json | cfssljson_linux-amd64 -bare /tmp/service-account"
+    - "cfssl_linux-amd64 gencert -ca=/tmp/ca.pem -ca-key=/tmp/ca-key.pem -config={{ role_path }}/files/ca-config.json -profile=kubernetes /tmp/kube-proxy-csr.json | cfssljson_linux-amd64 -bare /tmp/kube-proxy"
+  tags: pre
+
+- name: Generating Workers certificates with cfssl
+  shell: "cfssl_linux-amd64 gencert -ca=/tmp/ca.pem -ca-key=/tmp/ca-key.pem -config={{ role_path }}/files/ca-config.json -hostname={{ hostvars[item]['name'] }},{{ hostvars[item]['ext_ip'] }},{{ hostvars[item]['int_ip'] }} -profile=kubernetes /tmp/{{ hostvars[item]['name'] }}-csr.json | cfssljson_linux-amd64 -bare /tmp/{{ hostvars[item]['name'] }}"
+  with_items:
+    - "{{ groups['workers'] }}"
+  tags: pre
+
+- name: Generating Masters certificates with cfssl
+  shell: "cfssl_linux-amd64 gencert -ca=/tmp/ca.pem -ca-key=/tmp/ca-key.pem -config={{ role_path }}/files/ca-config.json -hostname=127.0.0.1,{{ master_ip }},{% for master_host in groups.masters %}{{ hostvars[master_host]['ext_ip'] }},{{ hostvars[master_host]['int_ip'] }}{% if not loop.last %},{% endif %}{% endfor %},{{ service_ip | ipaddr('1') | ipaddr('address') }},kubernetes.default,kubernetes.default.svc,kubernetes.default.svc.cluster,kubernetes.default.svc.cluster.local -profile=kubernetes /tmp/kubernetes-csr.json | cfssljson_linux-amd64 -bare /tmp/kubernetes"
+  tags: pre
+
+- name: Extra step to manage self signed CA
+  shell: openssl x509 -outform der -in /tmp/ca.pem -out /usr/local/share/ca-certificates/kubernetes.crt
+  tags: pre
+
+- name: Extra step to manage self signed CA = Updating ca-certs
+  shell: /usr/sbin/update-ca-certificates
+
+- name: Giving enough rights to be able to distribute cert files
+  file:
+    path: "{{ item }}"
+    mode: "o+r"
+  with_fileglob:
+    - /tmp/*-key.pem
+  tags: pre

@@ -1,0 +1,3 @@
+---
+- name: restart yum-cron
+  systemd: name=yum-cron state=restarted enabled=yes

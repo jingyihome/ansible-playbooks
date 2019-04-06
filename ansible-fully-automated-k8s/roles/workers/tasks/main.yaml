@@ -1,0 +1,4 @@
+---
+- include_vars: "{{ playbook_dir }}/host_vars/global_vars.yaml"
+- include_tasks: distribute-files.yaml
+- include_tasks: start-workers.yaml

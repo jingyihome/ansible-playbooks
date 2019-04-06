@@ -1,0 +1,43 @@
+# Bootstrap debian or redhat server with hardened security settings
+---
+- hosts: all
+  gather_facts: false
+  become: true
+
+  # bootstrap python onto server
+  #
+  pre_tasks:
+  - name: Install python 2 if not there
+    raw: |
+      if [ -r /etc/debian_version ]; then
+        test -e /usr/bin/python ||
+        (apt -y update && apt install -y python-simplejson);
+      elif [ -r /etc/fedora-release ]; then
+        rpm -q libselinux-python >/dev/null 2>&1 ||
+        dnf -y install python2-dnf libselinux-python;
+      else
+        echo "Only Debian and Fedora supported.";
+        exit 1;
+      fi
+    register: output
+    changed_when: output.stdout|trim() != ""
+  - name: Install sudo if not there - only relevant for debian
+    raw: |
+      if [ -r /etc/debian_version ]; then
+        test -e /usr/bin/sudo || apt install -y sudo;
+      fi
+    register: output
+    changed_when: output.stdout|trim() != ""
+
+  roles:
+  - deploy-user
+
+# Now, with deploy user set up, we can use it to do the rest.
+# Especially important for when we shut the door on root ssh logins.
+#
+- hosts: all
+  remote_user: "{{ deploy_user_name }}"
+  become: true
+
+  roles:
+  - secure-server

@@ -1,0 +1,37 @@
+---
+services: docker
+
+language: python
+python:
+  - 3.6
+cache: pip
+
+stages:
+  - test
+  - name: build-docker
+    if: branch = master AND type != pull_request
+
+jobs:
+  include:
+    - stage: test
+      install:
+        - pip install -r molecule/requirements.txt
+      script:
+        - cd docs
+        - make html
+    - stage: build-docker
+      script:
+        - >2
+          docker build molecule/docker-images/
+          -f molecule/docker-images/Dockerfile-dnsmasq
+          -t hugoshaka/dnsmasq-ansible-mailserver
+        - docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
+        - docker push hugoshaka/dnsmasq-ansible-mailserver
+
+notifications:
+  irc:
+    channels:
+      - "irc.rezosup.org#mailserver"
+    on_success: change  # default: always
+    on_failure: always  # default: always
+...

@@ -1,0 +1,10 @@
+<pool type='logical'>
+  <name>{{ KVM_STORAGE_POOL.NAME }}</name>
+  <source>
+    <name>{{ KVM_STORAGE_POOL.SOURCE }}</name>
+    <format type='lvm2'/>
+  </source>
+  <target>
+    <path>{{ KVM_STORAGE_POOL.PATH }}</path>
+  </target>
+</pool>

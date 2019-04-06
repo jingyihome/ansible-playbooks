@@ -1,0 +1,46 @@
+---
+- name: Deploy reverse proxy
+  hosts: reverse_proxy
+  # reverse_proxy = mta + mda + antispam
+  roles:
+    - ispmail-nginx
+  tags:
+    - reverse_proxy
+    - nginx
+
+- name: Deploy certificates
+  hosts: mail
+  roles:
+    - ispmail-certificate
+  tags:
+    - certs
+
+- name: Deploy database
+  hosts: db
+  roles:
+    - ispmail-database
+  vars:
+    ispmail_pgadmin_password: PGAdmin_Password
+  tags:
+    - postgres
+    - db
+
+- name: Deploy mail transfer agent
+  hosts: mta
+  roles:
+    - ispmail-rspamd
+    - ispmail-postfix
+  tags:
+    - postfix
+    - mta
+
+- name: Deploy mail delivery agent
+  hosts: mda
+  roles:
+    - ispmail-dovecot
+  vars:
+    ispmail_debug: true
+  tags:
+    - dovecot
+    - mda
+...

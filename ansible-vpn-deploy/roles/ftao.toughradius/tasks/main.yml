@@ -1,0 +1,64 @@
+---
+# tasks file for ftao.toughradius
+#
+
+- name: create working dir
+  file: path="{{ item }}" state=directory
+  with_items:
+    - "{{ toughradius_working_dir }}"
+    - "{{ toughradius_working_dir }}/env"
+    - "{{ toughradius_log_dir }}"
+    - "{{ toughradius_data_dir }}"
+    - "{{ toughradius_etc_dir }}"
+    - "{{ toughradius_backup_dir }}"
+
+- name: install openssl & others
+  apt: name={{ item }} state=present
+  with_items:
+    - libssl-dev
+    - libffi-dev
+  when: toughradius_ssl_on
+
+- name: install toughradius dep via pip
+  pip: name=pyOpenSSL
+       virtualenv="{{ toughradius_working_dir }}/env"
+       state=present
+  with_items: 
+     - pyOpenSSL
+     - service_identity
+  notify:
+    - restart toughradius
+  when: toughradius_ssl_on
+
+- name: install toughradius via pip
+  pip: name="{{ toughradius_install_source }}"
+       virtualenv="{{ toughradius_working_dir }}/env"
+       state=present
+  notify:
+    - restart toughradius
+
+- name: upload ssl key
+  copy: src={{ toughradius_ssl_key }} dest={{ toughradius_etc_dir }}/toughradius.key
+  when: toughradius_ssl_on
+  notify:
+    - restart toughradius
+
+- name: upload ssl cert
+  copy: src={{ toughradius_ssl_cert }} dest={{ toughradius_etc_dir }}/toughradius.crt
+  when: toughradius_ssl_on
+  notify:
+    - restart toughradius
+ 
+- name: create config file
+  template: src=toughradius.conf dest={{ toughradius_conf_path }}
+  notify:
+    - restart toughradius
+
+- name: init database 
+  shell: "{{ toughctl_path }} -c {{ toughradius_conf_path }} --initdb
+         creates={{ toughradius_db_path }}"
+
+- name: create supervisor config file
+  template: src=toughradius.supervisor.conf dest=/etc/supervisor/conf.d/toughradius.conf
+  notify:
+    - restart toughradius

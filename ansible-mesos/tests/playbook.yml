@@ -1,0 +1,7 @@
+---
+- hosts: localhost
+  connection: local
+  remote_user: root
+  roles:
+    - role: role_under_test
+      mesos_install_mode: "master-slave"

@@ -1,0 +1,7 @@
+<network>
+  <name>public</name>
+  <bridge name="br-public" />
+  <forward mode="route"/>
+  <ip family="ipv6" address="{KVM_NETWORKS.PUBLIC.ADDRESS}" prefix="{KVM_NETWORKS.PUBLIC.PREFIX}">
+  </ip>
+</network>

@@ -1,0 +1,212 @@
+---
+
+- python_requirements_facts:
+    dependencies:
+      - openshift
+      - requests
+
+- name: Download rbac-kdd.yaml
+  get_url:
+    url: https://tinyurl.com/yb4xturm
+    dest: /home/roderick/rbac-kdd.yaml
+    mode: 0644
+
+- name: Download calico.yaml
+  get_url:
+    url: https://tinyurl.com/y8lvqc9g
+    dest: /home/roderick/calico.yaml
+    mode: 0644
+
+- stat: path=/etc/kubernetes/admin.conf
+  register: kubeadmconf
+
+- name: Initialize master
+  shell: kubeadm init --kubernetes-version 1.13.3 --pod-network-cidr 192.168.0.0/16 |tee kubeadm-init.out 
+  become: true
+  when: not kubeadmconf.stat.exists
+
+- name: Create $HOME/.kube directory
+  file:
+    path: /home/roderick/.kube
+    state: directory
+    owner: roderick
+    group: roderick
+    mode: 0755
+
+- name: Copy admin.conf to $HOME/.kube
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/roderick/.kube/config
+    remote_src: yes
+    owner: roderick
+    group: roderick
+  become: true
+
+- name: Fetching kubeadm-init.out from master
+  fetch:
+    src: kubeadm-init.out
+    dest: ./kubeadm-init.out
+    flat: true
+
+- name: Install nfs-kernel-serverr
+  apt:
+    name: ['nfs-kernel-server']
+    state: present
+
+- name: Create /opt/sfw
+  file:
+    path: /opt/sfw
+    state: directory
+    owner: root
+    group: root
+    mode: 01777
+  become: true
+
+- name: Line insert in /etc/exports 
+  lineinfile:
+    path: /etc/exports
+    line: '/opt/sfw/ *(rw,sync,no_root_squash,subtree_check)'
+  become: true
+  register: exports
+
+- name: export nfs
+  command: 'exportfs -ra'
+  when: exports.changed
+
+- name: Create lab 4 directory
+  file:
+    path: ./4
+    state: directory
+    owner: roderick
+    group: roderick
+    mode: 0755
+
+- name: Copy low-resource-range.yaml for lab 4
+  copy:
+    src: 4/low-resource-range.yaml
+    dest: ./4/low-resource-range.yaml
+    owner: roderick
+    group: roderick
+
+- name: Download complete-demo.yaml for lab 4
+  get_url:
+    url: https://tinyurl.com/y8bn2awp
+    dest: ./4/complete-demo.yaml
+    mode: 0644
+
+- name: Create lab 5 directory
+  file:
+    path: ./5
+    state: directory
+    owner: roderick
+    group: roderick
+    mode: 0755
+
+- name: Create lab 6 directory
+  file:
+    path: ./6
+    state: directory
+    owner: roderick
+    group: roderick
+    mode: 0755
+
+- name: Copy job.yaml for Lab 6
+  copy:
+    src: 6/job.yaml
+    dest: ./6/job.yaml
+    owner: roderick
+    group: roderick
+
+- name: Copy cronjob.yaml for Lab 6
+  copy:
+    src: 6/cronjob.yaml
+    dest: ./6/cronjob.yaml
+    owner: roderick
+    group: roderick
+
+- name: Create lab 7 directory
+  file:
+    path: ./7
+    state: directory
+    owner: roderick
+    group: roderick
+    mode: 0755
+
+- name: Copy rs.yaml for Lab 7
+  copy:
+    src: 7/rs.yaml
+    dest: ./7/rs.yaml
+    owner: roderick
+    group: roderick
+
+- name: Copy ds.yaml for Lab 7
+  copy:
+    src: 7/ds.yaml
+    dest: ./7/ds.yaml
+    owner: roderick
+    group: roderick
+
+- name: Create lab 8 directory
+  file:
+    path: ./8
+    state: directory
+    owner: roderick
+    group: roderick
+    mode: 0755
+
+- name: Copy nginx-one.yaml for Lab 8
+  copy:
+    src: 8/nginx-one.yaml
+    dest: ./8/nginx-one.yaml
+    owner: roderick
+    group: roderick
+
+- name: Create lab 9 directory
+  file:
+    path: ./9
+    state: directory
+    owner: roderick
+    group: roderick
+    mode: 0755
+
+- name: Copy nfs-pod.yaml for Lab 9
+  copy:
+    src: 9/nfs-pod.yaml
+    dest: ./9/nfs-pod.yaml
+    owner: roderick
+    group: roderick
+
+- name: Copy PVol.yaml for Lab 9
+  copy:
+    src: 9/PVol.yaml
+    dest: ./9/PVol.yaml
+    owner: roderick
+    group: roderick
+
+- name: Copy pvc.yaml for Lab 9
+  copy:
+    src: 9/pvc.yaml
+    dest: ./9/pvc.yaml
+    owner: roderick
+    group: roderick
+
+- name: Copy storage-quota.yaml for Lab 9
+  copy:
+    src: 9/storage-quota.yaml
+    dest: ./9/storage-quota.yaml
+    owner: roderick
+    group: roderick
+
+- name: Copy simpleshell.yaml for Lab 9
+  copy:
+    src: 9/simpleshell.yaml
+    dest: ./9/simpleshell.yaml
+    owner: roderick
+    group: roderick
+
+- name: Copy cap-map.yaml for Lab 9
+  copy:
+    src: 9/cap-map.yaml
+    dest: ./9/cap-map.yaml
+    owner: roderick
+    group: roderick

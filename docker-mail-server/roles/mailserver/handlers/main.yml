@@ -1,0 +1,59 @@
+---
+- name: restart nginx
+  shell: docker-compose stop nginx; docker-compose up -d nginx
+  args:
+    chdir: ~{{ deploy_user_name }}
+  become_user: "{{ deploy_user_name }}"
+  when: nginx_is_running
+
+- name: restart stack
+  shell: docker-compose down; docker-compose up -d
+  args:
+    chdir: ~{{ deploy_user_name }}
+  become_user: "{{ deploy_user_name }}"
+  when: nginx_is_running
+
+- name: restart contact
+  shell: docker-compose stop contact; docker-compose up -d contact
+  args:
+    chdir: ~{{ deploy_user_name }}
+  become_user: "{{ deploy_user_name }}"
+  when: nginx_is_running
+
+- name: restart mailserver
+  shell: docker-compose stop mailserver; docker-compose up -d mailserver
+  args:
+    chdir: ~{{ deploy_user_name }}
+  become_user: "{{ deploy_user_name }}"
+  when: nginx_is_running
+
+- name: Restart fail2ban
+  service: name=fail2ban state=restarted
+
+- name: restart wordpress
+  shell: docker-compose stop wordpress; docker-compose up -d wordpress
+  args:
+    chdir: ~{{ deploy_user_name }}
+  become_user: "{{ deploy_user_name }}"
+  when: nginx_is_running
+
+- name: restart opencart
+  shell: docker-compose stop opencart; docker-compose up -d opencart
+  args:
+    chdir: ~{{ deploy_user_name }}
+  become_user: "{{ deploy_user_name }}"
+  when: nginx_is_running
+
+- name: restart poweradmin
+  shell: docker-compose stop poweradmin; docker-compose up -d poweradmin
+  args:
+    chdir: ~{{ deploy_user_name }}
+  become_user: "{{ deploy_user_name }}"
+  when: nginx_is_running
+
+- name: restart pritunl
+  shell: docker-compose stop pritunl; docker-compose up -d pritunl
+  args:
+    chdir: ~{{ deploy_user_name }}
+  become_user: "{{ deploy_user_name }}"
+  when: nginx_is_running

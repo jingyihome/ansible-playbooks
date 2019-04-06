@@ -1,0 +1,6 @@
+---
+- hosts: workers
+  become: True
+  roles: 
+    - role: workers
+      tags: work

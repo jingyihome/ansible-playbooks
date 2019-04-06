@@ -1,0 +1,40 @@
+---
+- name:  Enforce xl2tpd is installed
+  action: apt pkg=xl2tpd state=installed
+
+- name:  Upload xl2tpd config files
+  action: template src={{ item }}
+                   dest=/etc/{{ item }}
+                   owner=root group=root mode=0644
+  with_items:
+    - xl2tpd/xl2tpd.conf
+  notify: restart xl2tpd
+
+#change this file, no need to restart xl2tpd
+- name:  Upload ppp l2tpd options file
+  action: template src={{ item }}
+                   dest=/etc/{{ item }}
+                   owner=root group=root mode=0644
+  with_items:
+    - ppp/l2tpd-options
+
+- name: make sure /opt/easynat exists
+  action: file path=/opt/easynat/ state=directory
+  when: l2tp_enable_nat
+  tags: 
+    - l2tp
+    - nat
+
+- name: set network in easynat rule file
+  action: lineinfile dest=/opt/easynat/rules.cnf 
+                     regexp="{{ l2tp_network.subnet }}"
+                     line="{{ l2tp_network.subnet }}"
+                     state=present create=yes
+  when: l2tp_enable_nat
+  notify: 
+    - setup nat rules
+  tags: 
+    - l2tp
+    - nat
+
+- include: add_user.yml

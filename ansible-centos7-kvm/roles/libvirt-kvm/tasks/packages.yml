@@ -1,0 +1,4 @@
+---
+- name: libvirt-kvm | packages | install required packages
+  yum: name={{ item }} state=latest update_cache=yes
+  with_items: "{{ KVM_PACKAGES }}"

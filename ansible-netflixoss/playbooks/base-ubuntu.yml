@@ -1,0 +1,11 @@
+---
+# Base playbook for ubuntu
+- name: Base
+  user: ubuntu
+  sudo: True
+  hosts: all
+  roles:
+    - { role: base, tags: ['base'] }
+  vars_files:
+    - vars/common.yml
+    - vars/{{ ansible_distribution }}.yml

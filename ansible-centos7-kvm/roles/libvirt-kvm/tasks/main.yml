@@ -1,0 +1,5 @@
+---
+- include: packages.yml
+- include: user.yml
+- include: storage.yml
+- include: networks.yml

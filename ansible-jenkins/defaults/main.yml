@@ -1,0 +1,27 @@
+---
+placeholder: 'placeholder'
+port: 8080
+ajp_port: -1
+# plugins:
+#   - 'ldap'
+#   - 'github'
+#   - 'translation'
+#   - 'preSCMbuildstep'
+#   - 'gravatar'
+
+proxy: no
+proxy_host: localhost
+proxy_port: 3128
+proxy_login: login
+proxy_password: password
+proxy_url: "http://{{proxy_login}}:{{proxy_password}}@{{proxy_host}}:{{proxy_port}}"
+__no_proxy: "localhost"
+proxy_env:
+  http_proxy: "{{proxy_url}}"
+  https_proxy: "{{proxy_url}}"
+  no_proxy: "{{__no_proxy}}"
+prefix: "/"
+java_version: "openjdk-7"
+jenkins_updates_url: "https://updates.jenkins.io/current/update-center.json"
+# jenkins_admin_user: admin
+# jenkins_admin_password: recommended to be put a vault file

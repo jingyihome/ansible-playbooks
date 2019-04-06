@@ -1,0 +1,79 @@
+---
+
+- name: install nginx
+  apt: pkg=nginx state=present
+  tags:
+    - pch
+
+- name: enable nginx
+  service: name=nginx enabled=true
+  tags:
+    - pch
+
+- name: upload nginx site config file
+  template: src=nginx.conf dest=/etc/nginx/sites-available/pch-{{ pch_name }}
+  notify:
+    - restart nginx
+  tags:
+    - pch
+
+- name: upload cert for ssl site
+  copy: src={{ pch_cert }}
+        dest=/etc/ssl/certs/pch-{{ pch_name }}.pem
+  when: pch_cert is defined
+  notify:
+    - restart nginx
+  tags:
+    - pch
+
+- name: upload private key for ssl site
+  copy: src={{ pch_private_key }}
+        dest=/etc/ssl/private/pch-{{ pch_name }}.key
+  when: pch_private_key is defined
+  notify:
+    - restart nginx
+  tags:
+    - pch
+
+- name: enable site 
+  file: path=/etc/nginx/sites-enabled/pch-{{ pch_name }}
+        src=/etc/nginx/sites-available/pch-{{ pch_name }}
+        state=link
+  notify:
+    - restart nginx
+  tags:
+    - pch
+
+- name: create pac root directory 
+  file: path=/var/www/pch/{{ pch_name }} 
+        state=directory
+        owner=www-data group=www-data
+  tags:
+    - pch
+
+- include: gfwlist.yml
+- include: chnroute.yml
+- include: whitelist.yml
+
+- name: ensure css direcotry
+  file: path=/var/www/pch/{{ pch_name }}/css/ state=directory
+  tags:
+    - pch
+    - html
+
+- name: upload css 
+  copy: src=bootstrap.min.css dest=/var/www/pch/{{ pch_name }}/css/bootstrap.min.css
+  tags:
+    - pch
+    - html
+  
+- name: generate index page
+  template: src=pch_index.html dest=/var/www/pch/{{ pch_name }}/index.html
+  tags:
+    - pch
+    - html
+
+- name: change owner to www-data 
+  file: path=/var/www/pch/{{ pch_name }} owner=www-data group=www-data
+  tags:
+    - pch

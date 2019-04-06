@@ -1,0 +1,83 @@
+---
+- name: Ensures /var/lib/kubernetes/ dir exists on Master(s)
+  file: 
+    path="{{ item }}"
+    state=directory
+  with_items:
+    - /var/lib/kubernetes/
+    - /usr/local/share/ca-certificates
+    - /etc/kubernetes/config
+
+- name: Copying cert files on master(s)
+  copy: 
+    src: "/tmp/{{ item }}"
+    dest: "/var/lib/kubernetes/{{ item }}"
+    mode: 0600
+  with_items:
+    - ca.pem
+    - ca-key.pem
+    - kubernetes-key.pem
+    - kubernetes.pem
+    - service-account-key.pem
+    - service-account.pem
+    - encryption-config.yaml
+    - kube-scheduler.kubeconfig
+    - kube-controller-manager.kubeconfig
+
+- name: Extra step to manage self signed CA
+  shell: openssl x509 -outform der -in /var/lib/kubernetes/ca.pem -out /usr/local/share/ca-certificates/kubernetes.crt
+
+#- name: Extra step to manage self signed CA = Moving crt to ca store
+#  copy: 
+#    src: "/tmp/kubernetes.crt"
+#    dest: "/usr/local/share/ca-certificates/"
+
+- name: Extra step to manage self signed CA = Updating ca-certs
+  shell: /usr/sbin/update-ca-certificates
+
+- name: Copying Kube files on master(s)
+  copy: 
+    src: "/tmp/{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: 0655
+  with_items:
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler
+    - kubectl
+
+- name: Copying Apiserver service file on Master(s)
+  template: 
+    src: "kube-apiserver-service.j2"
+    dest: "/etc/systemd/system/kube-apiserver.service"
+
+- name: Copying kube-controller-manager service file on Master(s)
+  template: 
+    src: "kube-controller-manager-service.j2"
+    dest: "/etc/systemd/system/kube-controller-manager.service"
+
+- name: Copying kube-scheduler service file on Master(s)
+  template: 
+    src: "{{ role_path }}/files/kube-scheduler.service"
+    dest: "/etc/systemd/system/kube-scheduler.service"
+
+- name: Copying kube-scheduler config file on Master(s)
+  template: 
+    src: "{{ role_path }}/files/kube-scheduler.yaml"
+    dest: "/etc/kubernetes/config/kube-scheduler.yaml"
+
+- name: Copying DNS add-on file on Master(s)
+  copy: 
+    src: "/tmp/{{ item }}.yaml"
+    dest: "/tmp/{{ item }}.yaml"
+  with_items:
+    - kube-dns
+    - coredns
+
+- name: Copying RBAC files on Master(s)
+  copy: 
+    src: "{{ role_path }}/files/{{ item }}"
+    dest: "/tmp/{{ item }}"
+  with_items:
+    - rbac_clusterRole.yaml
+    - rbac_clusterRoleBinding.yaml

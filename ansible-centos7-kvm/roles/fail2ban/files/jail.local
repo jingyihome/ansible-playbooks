@@ -1,0 +1,7 @@
+[DEFAULT]
+# Ban hosts for one hour
+bantime = 3600
+
+# Enable ssh jail
+[sshd]
+enabled = true

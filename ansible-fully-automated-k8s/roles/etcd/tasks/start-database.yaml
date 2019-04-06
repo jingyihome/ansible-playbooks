@@ -1,0 +1,12 @@
+---
+- name: daemon_reload
+  systemd: 
+    daemon_reload: yes
+
+- name: Start services
+  service: 
+    name: "{{ item }}"
+    enabled: yes
+    state: started
+  with_items:
+    - etcd

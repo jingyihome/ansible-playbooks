@@ -1,0 +1,14 @@
+---
+- hosts: all
+  become: true
+
+  roles:
+  - docker
+  - unblock-ports
+  - { role: certificates, when: not self_signed_certs }
+
+- hosts: all
+  become: true
+
+  roles:
+  - mailserver

@@ -1,0 +1,8 @@
+---
+java_package: java-1.8.0-openjdk
+http_port: 8080
+https_port: 8443
+tomcat_package_url: https://www-us.apache.org/dist/tomcat/tomcat-9/v9.0.14/bin/apache-tomcat-9.0.14.tar.gz
+tomcat_package_name: apache-tomcat-9.0.14
+admin_username: admin
+admin_password: password

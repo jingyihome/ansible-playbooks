@@ -1,0 +1,44 @@
+---
+- name: configure nginx rpm
+  yum:
+    name: "{{nginx_url}}"
+
+- name: Install nginx server
+  yum:
+    name: nginx
+    state: present
+    enablerepo: nginx
+
+- name: start and enable nginx server
+  service:
+    name: nginx
+    state: started
+    enabled: true
+
+
+- name: copy nginx.conf to the nginx server
+  file:
+    src: default.conf
+    dest: /etc/nginx/conf.d/default.conf
+    force: true
+  notify: restart the server
+
+- name: copy index.html to the nginx server
+  file:
+    src: index.html
+    dest: /usr/share/nginx/html/index.html
+    force: true
+
+- name: create certificates directory
+  file:
+    path: "{{ item | dirname }}"
+    state: directory
+  with_items:
+    - "{{ nginx_ssl_certificate }}"
+    - "{{ nginx_ssl_certificate_key }}"
+
+- name: generate self-signed SSL certificate
+  command: openssl req -new -nodes -x509 -subj "{{ nginx_ssl_certificate_subject }}" -days {{ nginx_ssl_certificate_days }} -keyout {{ nginx_ssl_certificate_key }} -out {{ nginx_ssl_certificate }} -extensions v3_ca
+  args:
+    creates: "{{ nginx_ssl_certificate }}"
+  notify: restart the server

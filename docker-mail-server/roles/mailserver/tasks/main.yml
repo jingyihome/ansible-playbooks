@@ -1,0 +1,415 @@
+---
+- name: purge Exim installation
+  apt: name={{item}} state=absent purge=yes
+  with_items:
+  - exim4
+  - exim4-base
+  - exim4-config
+  - exim4-daemon-light
+  when: ansible_os_family == "Debian"
+
+- name: Copy over docker-compose.yml
+  template:
+    src: files/docker-compose.yml
+    dest: /home/{{ deploy_user_name }}/docker-compose.yml
+  notify:
+  - restart stack
+
+- name: Set up upgrade script
+  template:
+    src: files/upgrade
+    dest: /usr/local/bin/upgrade
+    mode: 0755
+
+- block:
+  - name: Is nginx running?
+    shell: "(docker ps | grep nginx) || true"
+    register: tmp
+    changed_when: false
+  - set_fact:
+      nginx_is_running: "{{ tmp.stdout_lines|length() > 0 }}"
+  tags:
+    - always
+
+- name: New systemd unit to run docker-compose
+  template:
+    src: files/mailserver/mailserver.service
+    dest: /etc/systemd/system/mailserver.service
+
+- name: Enable mailserver.service
+  systemd: name=mailserver.service enabled=true
+
+- name: postfix config directory
+  file:
+    path: /mnt/docker/mail/postfix
+    state: directory
+    recurse: yes
+
+- name: See if postfix custom file exists
+  stat:
+    path: /mnt/docker/mail/postfix/custom.conf
+  register: postfix_custom
+- name: Set custom postix config for RELAY_NETWORKS if it does not exist
+  copy:
+    dest: /mnt/docker/mail/postfix/custom.conf
+    src: files/mailserver/custom.conf
+  when: not postfix_custom.stat.exists
+  notify: restart mailserver
+
+- name: nginx directories
+  file:
+    path: /mnt/docker/{{ item }}
+    state: directory
+    recurse: yes
+    owner: 991
+    group: 991
+  with_items:
+  - nginx/sites-enabled
+  - nginx/conf
+  - nginx/log
+
+- name: See if nginx access log exists
+  stat: path=/mnt/docker/nginx/log/access.log
+  register: access_log
+  changed_when: false
+
+- name: dummy log file for fail2ban startup
+  file:
+    path: /mnt/docker/nginx/log/access.log
+    state: touch
+    owner: 991
+    group: 991
+  when: not access_log.stat.exists
+
+- name: Set up robots global file (serves /robots.txt)
+  copy:
+    src: files/nginx/robots
+    dest: /mnt/docker/nginx/conf/robots
+    owner: 991
+    group: 991
+  notify:
+  - restart nginx
+
+- name: Enable sites
+  template:
+    src: files/nginx/{{ item }}.conf
+    dest: /mnt/docker/nginx/sites-enabled/{{ item }}.conf
+    owner: 991
+    group: 991
+  with_items:
+  - postfixadmin
+  - rainloop
+  - rspamd
+  notify:
+  - restart nginx
+
+- name: Top-level naked domain name redirect to www site
+  template:
+    src: files/nginx/top-level.conf
+    dest: /mnt/docker/nginx/sites-enabled/{{ domain_name }}.conf
+    owner: 991
+    group: 991
+  notify:
+  - restart nginx
+
+- block:
+  - name: Set up wordpress directory
+    file:
+      path: /mnt/docker/{{ item }}
+      state: directory
+      recurse: yes
+      owner: 82
+      group: 82
+    with_items:
+    - wordpress
+    - php
+  - name: Set up wordpress nginx site
+    template:
+      src: files/nginx/www-wordpress.conf
+      dest: /mnt/docker/nginx/sites-enabled/wordpress.conf
+      owner: 991
+      group: 991
+    notify:
+    - restart nginx
+    - restart wordpress
+  - name: See if php custom file exists
+    stat:
+      path: /mnt/docker/php/custom.ini
+    register: php_custom
+  - name: Set up empty custom.ini for php modifications
+    file:
+      path: /mnt/docker/php/custom.ini
+      state: touch
+      owner: 82
+      group: 82
+    when: not php_custom.stat.exists
+  when: www_is_wordpress
+
+- block:
+  - name: Set up opencart directory
+    file:
+      path: /mnt/docker/opencart
+      state: directory
+      recurse: yes
+      mode: 0777
+  - name: Set up opencart nginx site
+    template:
+      src: files/nginx/www-opencart.conf
+      dest: /mnt/docker/nginx/sites-enabled/opencart.conf
+      owner: 991
+      group: 991
+    notify:
+    - restart nginx
+    - restart opencart
+  when: use_opencart
+
+- block:
+  - name: Set up poweradmin directory
+    file:
+      path: /mnt/docker/poweradmin
+      state: directory
+      recurse: yes
+      mode: 0777
+  - name: Set up poweradmin nginx site
+    template:
+      src: files/nginx/www-poweradmin.conf
+      dest: /mnt/docker/nginx/sites-enabled/poweradmin.conf
+      owner: 991
+      group: 991
+    notify:
+    - restart nginx
+    - restart poweradmin
+  when: use_poweradmin
+
+- block:
+  - name: Set up pritunl directory
+    file:
+      path: /mnt/docker/pritunl
+      state: directory
+      recurse: yes
+      mode: 0777
+  - name: Set up pritunl nginx site
+    template:
+      src: files/nginx/www-pritunl.conf
+      dest: /mnt/docker/nginx/sites-enabled/pritunl.conf
+      owner: 991
+      group: 991
+    notify:
+    - restart nginx
+    - restart pritunl
+  when: use_pritunl
+
+- block:
+  - name: Web files here?
+    local_action: shell ls www/{{ domain_name }} 2>/dev/null || true
+    register: www_dir
+    changed_when: false
+  - set_fact:
+      website_setup: "{{ www_dir.stdout_lines|length() > 0 }}"
+  tags:
+    - always
+
+- name: Set up www site as Contact form.
+  template:
+    src: files/nginx/www-contact.conf
+    dest: /mnt/docker/nginx/sites-enabled/www.conf
+    owner: 991
+    group: 991
+  notify:
+  - restart nginx
+  when: not website_setup and not www_is_wordpress
+
+- name: Set up the contact_form_postfix
+  block:
+  - set_fact: contact_form_postfix=""
+  # In the next configuration, contact POST action goes to /contact.
+  - set_fact: contact_form_postfix="contact/"
+    when: website_setup
+  tags:
+    - always
+
+- name: Set up www site with files.
+  block:
+  - local_action:
+      module: file
+      path: www/{{ domain_name }}/{{ item }}
+      args:
+        state: directory
+    with_items:
+    - static
+    - people
+    - files
+    become: false
+  # now create dirs under /mnt/docker/www
+  - file:
+      path: /mnt/docker/www/files/{{ item.path }}
+      state: directory
+      recurse: yes
+      owner: 991
+      group: 991
+    with_filetree: www/{{ domain_name}}/files
+    when: item.state == 'directory'
+  - file:
+      path: /mnt/docker/www/people/{{ item.path }}
+      state: directory
+      recurse: yes
+      owner: 991
+      group: 991
+    with_filetree: www/{{ domain_name}}/people
+    when: item.state == 'directory'
+  - file:
+      path: /mnt/docker/www/{{ item.path }}
+      state: directory
+      recurse: yes
+      owner: 991
+      group: 991
+    with_filetree: www/{{ domain_name}}/static
+    when: item.state == 'directory'
+
+  # list of text files
+  - local_action:
+      module: |
+        shell find . -type f | egrep -v '^\./static/' | xargs file -i |
+        egrep 'text/plain|text/html' | awk -F: '{print $1}'
+      args:
+        chdir: www/{{ domain_name }}
+    register: web_text_files
+    changed_when: false
+
+  # list of binary files
+  - local_action:
+      module: |
+        shell find . -type f | egrep -v '^./static/' | xargs file -i |
+        egrep -v 'text/plain|text/html' | awk -F: '{print $1}'
+      args:
+        chdir: www/{{ domain_name }}
+    register: web_binary_files
+    changed_when: false
+
+  # list of static files
+  - local_action:
+      module: |
+        shell find . -type f
+      args:
+        chdir: www/{{ domain_name }}/static
+    register: web_static_files
+    changed_when: false
+
+  # now create files with template
+  - name: Update web site text files
+    template:
+      src: www/{{ domain_name }}/{{ item }}
+      dest: /mnt/docker/www/{{ item }}
+      owner: 991
+      group: 991
+    with_items: "{{ web_text_files.stdout_lines }}"
+
+  # Copy the binary files
+  - name: Update web site binary files
+    copy:
+      src: www/{{ domain_name }}/{{ item }}
+      dest: /mnt/docker/www/{{ item }}
+      owner: 991
+      group: 991
+    with_items: "{{ web_binary_files.stdout_lines }}"
+
+  # Copy the static files
+  - name: Update web site static files
+    copy:
+      src: www/{{ domain_name }}/static/{{ item }}
+      dest: /mnt/docker/www/{{ item }}
+      owner: 991
+      group: 991
+    with_items: "{{ web_static_files.stdout_lines }}"
+
+  # Now for the website nginx config
+  - name: Set up the nginx config
+    template:
+      src: files/nginx/www-files.conf
+      dest: /mnt/docker/nginx/sites-enabled/www.conf
+      owner: 991
+      group: 991
+    notify:
+    - restart nginx
+  when: website_setup and not www_is_wordpress
+  tags:
+    - website
+
+- block:
+  - name: contact form config directory
+    file:
+      path: /mnt/docker/contact/{{ item }}
+      state: directory
+      recurse: yes
+      owner: 991
+      group: 991
+    with_items:
+    - config
+    - ssmtp
+    tags:
+      - always
+
+  - name: contact config files
+    template:
+      src: files/contact/{{ item }}
+      dest: /mnt/docker/contact/{{ item }}
+      owner: 991
+      group: 991
+    with_items:
+    - config/config.php
+    - ssmtp/ssmtp.conf
+    - index.php
+    notify:
+    - restart contact
+    - restart nginx
+    tags:
+      - always
+  when: not www_is_wordpress
+
+- name: rainloop plugin directory
+  file:
+    path: /mnt/docker/rainloop/_data_/_default_/plugins
+    state: directory
+    recurse: yes
+    owner: 991
+    group: 991
+
+- name: copy postfixadmin password change plugin into rainloop
+  copy:
+    src: files/rainloop/postfixadmin-change-password
+    dest: /mnt/docker/rainloop/_data_/_default_/plugins
+    owner: 991
+    group: 991
+
+- name: Install the ufw-docker-hack script
+  copy:
+    src: files/fail2ban/ufw-docker-hack
+    dest: /usr/local/bin/ufw-docker-hack
+    mode: 0755
+
+- name: Install ufw-with-docker action for fail2ban
+  copy:
+    src: files/fail2ban/ufw-with-docker.conf
+    dest: /etc/fail2ban/action.d/ufw-with-docker.conf
+  notify: Restart fail2ban
+
+- name: fail2ban filter for bots that hit the php apps (301)
+  copy:
+    src: files/fail2ban/bots-redirect.conf
+    dest: /etc/fail2ban/filter.d/bots-redirect.conf
+  notify: Restart fail2ban
+
+- name: fail2ban setup for apache_badbots and bots-redirect
+  copy:
+    src: files/fail2ban/docker-badbots.conf
+    dest: /etc/fail2ban/jail.d/docker-badbots.conf
+  notify: Restart fail2ban
+
+# Runs as root, not the deploy user this time.
+- name: Start stack if needed
+  shell: /usr/local/bin/docker-compose up -d
+  args:
+    chdir: ~{{ deploy_user_name }}
+  when: not nginx_is_running
+  tags:
+    - always

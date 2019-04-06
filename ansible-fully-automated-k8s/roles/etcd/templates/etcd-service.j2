@@ -1,0 +1,11 @@
+[Unit]
+Description=etcd
+Documentation=https://github.com/coreos
+
+[Service]
+ExecStart=/usr/local/bin/etcd --name {{ inventory_hostname }} --initial-advertise-peer-urls http://{{ int_ip }}:2380 --listen-peer-urls http://{{ int_ip }}:2380 --listen-client-urls http://{{ int_ip }}:2379,http://127.0.0.1:2379 --advertise-client-urls http://{{ int_ip }}:2379 --initial-cluster-token etcd-cluster-0 --initial-cluster {% for controller in groups.databases %}{{ controller }}=http://{{ hostvars[controller]['int_ip'] }}:2380{% if not loop.last %},{% endif %}{% endfor %} --initial-cluster-state new --data-dir=/var/lib/etcd
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

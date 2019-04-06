@@ -1,0 +1,6 @@
+---
+- hosts: admin_machines
+  become: True
+  roles: 
+    - role: admin
+      tags: prep

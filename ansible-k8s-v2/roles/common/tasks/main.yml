@@ -1,0 +1,26 @@
+- name: update the server
+  yum:
+    name: "*"
+    state: latest
+  notify:
+    - restart server
+
+- name: remove cloud-init services
+  yum:
+    name: cloud-init
+    state: absent
+  notify: 
+    - restart server
+
+- name: add vip in hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ kubernetes_public_ip }} lb"
+
+- name: disable selinux
+  lineinfile: 
+    path: /etc/sysconfig/selinux
+    line: 'SELINUX=disabled'
+    regexp: '^SELINUX'
+  notify:
+    - restart server

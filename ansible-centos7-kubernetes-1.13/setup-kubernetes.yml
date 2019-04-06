@@ -1,0 +1,5 @@
+- name: setup kubernetes
+  hosts: all
+  roles:
+    - role: common
+    - role: kubernetes

@@ -1,0 +1,6 @@
+---
+- hosts: databases
+  become: True
+  roles: 
+    - role: etcd
+      tags: etcd

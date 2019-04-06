@@ -1,0 +1,10 @@
+---
+
+- name: restart sigmavpn-helper
+  supervisorctl: name=sigmavpn-helper state=restarted
+
+- name: restart sigmavpn {{ item.name }}
+  supervisorctl: name=sigmavpn-{{ item.name }} state=restarted
+  with_items: "{{ sigmavpn_peers }}"
+
+

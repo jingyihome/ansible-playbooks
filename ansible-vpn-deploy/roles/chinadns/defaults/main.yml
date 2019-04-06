@@ -1,0 +1,5 @@
+---
+chinadns_upstream:
+  - 114.114.114.114
+  - 8.8.4.4
+update_resolvconf: true

@@ -1,0 +1,39 @@
+---
+- name: get ca cert content
+  shell: cat /etc/ipsec.d/cacerts/ca_cert.pem | grep --invert-match CERTIFICATE
+  register: ipsec_ca_cert_content_action
+  tags: 
+    - ipsec
+    - ios8
+
+- name: fetch back ca cert
+  fetch: src=/etc/ipsec.d/cacerts/ca_cert.pem dest=/tmp/{{ inventory_hostname }}_ca_cert.pem
+  tags: 
+    - ipsec
+    - ios8
+
+- name: create ios8 config file directory
+  file: path=/var/www/ikev2/ios8-profile/ state=directory
+  tags: 
+    - ipsec
+    - ios8
+
+- name: generate ios config files
+  template: src=ios8-profile.mobileconfig dest=/var/www/ikev2/ios8-profile/{{ item.username }}.mobileconfig
+  with_items: "{{ ikev2_users }}"
+  tags: 
+    - ipsec
+    - ios8
+
+- name: sign the ios config files
+  shell: openssl smime -sign -in {{ item.username }}.mobileconfig -out {{ item.username }}.signed.mobileconfig 
+                 -signer /etc/ipsec.d/certs/server_cert.pem 
+                 -inkey /etc/ipsec.d/private/server_key.pem 
+                 -certfile /etc/ipsec.d/cacerts/ca_cert.pem
+                 -outform der -nodetach
+         chdir=/var/www/ikev2/ios8-profile/
+#         creates={{ item.username }}.signed.mobileconfig
+  with_items: "{{ ikev2_users }}"
+  tags: 
+    - ipsec
+    - ios8

@@ -1,0 +1,52 @@
+- name: Reset the master
+  shell:  kubeadm reset --force
+  ignore_errors: yes
+
+- name: Bootstrap the master
+  shell: |
+      systemctl daemon-reload
+      service kubelet restart
+      kubeadm init --apiserver-advertise-address 0.0.0.0 --pod-network-cidr={{ kube_service_addresses }} --ignore-preflight-errors cri --ignore-preflight-errors NumCPU
+  delegate_to: "master"
+  run_once: true
+
+
+############################
+- name: Restart kubelet
+  shell: |
+      systemctl daemon-reload
+      service kubelet restart
+
+- name: Wait for all pods to be ready
+  pause:
+     minutes: 3
+
+- name: Print status of all pods
+  shell: |
+      kubectl get pod --all-namespaces
+  delegate_to: "master"
+  run_once: true
+
+- name: Create kubeadm token for joining nodes with 24h expiration (default)
+  command: "kubeadm token create --print-join-command"
+  register: temp_kubeadm_join_command
+  delegate_to: "master"
+  run_once: true
+
+
+
+
+- name: join node 1
+  command: "{{ temp_kubeadm_join_command.stdout }}"
+  ignore_errors: yes
+  delegate_to: "{{slave1}}"
+  run_once: true
+
+
+- name: join node 2
+  command: "{{ temp_kubeadm_join_command.stdout }}"
+  ignore_errors: yes
+  delegate_to: "{{slave2}}"
+  run_once: true
+
+

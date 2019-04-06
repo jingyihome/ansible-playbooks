@@ -1,0 +1,151 @@
+#!/bin/sh
+#
+# Set up the variables used by mailserver set up tasks.
+
+cd $(dirname $0)/..
+
+VARS=group_vars/all/vars.yml
+VAULT_VARS=group_vars/all/secret.yml
+VAULT_PASS=".vault_pass.txt"
+
+if [ ! -d group_vars/all ]; then
+  mkdir -p group_vars/all
+fi
+
+tmp_vars=/tmp/tmpvars$$
+export var_list=/tmp/var_list$$
+export vault_var_list=/tmp/vault_list$$
+cp bin/all.yml $tmp_vars
+
+cleanup()
+{
+  rm -f $tmp_vars $var_list $vault_var_list
+  if [ -r $VAULT_PASS ]; then
+    ansible-vault encrypt $VAULT_VARS
+  fi
+}
+
+trap cleanup EXIT
+
+if [ -r $VAULT_VARS -a -r $VAULT_PASS ]; then
+  ansible-vault decrypt $VAULT_VARS > /dev/null 2>&1
+fi
+
+get_stored_default()
+{
+  case $1 in
+    vault_*)
+      __r=$(grep "$1" $VAULT_VARS 2>/dev/null| awk '{print $2}' )
+      echo $1 >> $vault_var_list
+      ;;
+    *)
+      __r=$(grep "$1" $VARS 2>/dev/null| awk '{print $2}')
+      echo $1 >> $var_list
+      ;;
+  esac
+  __r=$(echo $__r | sed "s/^\([\"']\)\(.*\)\1\$/\2/g")
+  if [ -z "$__r" ]; then echo "$2"; else echo "$__r"; fi
+}
+
+prompt_with_default()
+{
+  __get="$3" # set to grab the stored values
+  __def="$(eval echo \$$2)"
+  if [ -n "$__get" ]; then __def="$(get_stored_default $2 $__def)"; fi
+  __prompt="$(eval echo \"$1 [\$__def\]: \")"
+  read -p "$__prompt" ans
+  eval "$2=\${ans:-\$__def}"
+}
+
+use_stable_release=true
+prompt_with_default "Use stable release (false means use latest)" use_stable_release -stored
+
+domain_name=domain.com
+prompt_with_default "Top level domain name" domain_name -stored
+
+inventory_hostname=$domain_name
+if [ -r inventory ]; then inventory_hostname=$(cat inventory); fi
+prompt_with_default "Hostname (for Ansible inventory)" inventory_hostname
+echo ${inventory_hostname} > inventory
+
+timezone='America/Los_Angeles'
+prompt_with_default "Server timezone" timezone -stored
+
+vault_root_password=MyR00tPa33w0rd
+prompt_with_default "root password" vault_root_password -stored
+
+deploy_user_name=deploy
+prompt_with_default "deploy user name" deploy_user_name -stored
+vault_deploy_password=MyD3pl0yPas3w0rd
+prompt_with_default "deploy user password" vault_deploy_password -stored
+
+admin_email=postmaster@${domain_name}
+prompt_with_default "Admin reports email (for logwatch, etc.)" admin_email -stored
+
+vault_db_password=myDBpa88w0rd
+prompt_with_default "MariaDB root user password" vault_db_password -stored
+
+vault_user_password=postf1x001a9
+prompt_with_default "MariaDB postfix user password" vault_user_password -stored
+
+vault_rspamd_password=rsP1md178d
+prompt_with_default "RSpamd password" vault_rspamd_password -stored
+
+self_signed_certs=false
+prompt_with_default "Use self-signed certs (use for testing)" self_signed_certs -stored
+
+pgp_encrypt_emails=false
+prompt_with_default "PGP Encrypt Emails" pgp_encrypt_emails -stored
+
+www_is_wordpress=false
+prompt_with_default "Use Wordpress as www site" www_is_wordpress -stored
+
+use_poweradmin=false
+prompt_with_default "Use PowerDNS / Poweradmin as DNS site" use_poweradmin -stored
+
+use_opencart=false
+prompt_with_default "Use Opencart as ecommerce site" use_opencart -stored
+
+if [ $use_opencart != "false" ]; then
+  opencart_user=opencart
+  prompt_with_default "Opencart admin user name" opencart_user -stored
+  vault_opencart_password='op3Nc1rT'
+  prompt_with_default "Opencart admin initial password" vault_opencart_password -stored
+  opencart_from=postmaster@${domain_name}
+  prompt_with_default "Opencart admin mailbox" opencart_from -stored
+  echo ""
+  echo "NOTE: The $opencart_from address needs to be able to receive emails."
+  echo "Use postfixadmin to set up the opencart send/receive mailbox."
+  echo ""
+fi
+
+use_pritunl=false
+prompt_with_default "Use Pritunl VPN Server as VPN site" use_pritunl -stored
+
+echo ""
+echo "NOTE: When DB is initialized, database passwords are set."
+echo "If you need to change them, you'll need to connect to DB."
+echo ""
+
+for i in $(cat $var_list); do
+  echo "$i: $(eval echo \$$i)" >> $tmp_vars
+done
+
+vault_root_encrypted_password=$(./bin/mkpasswd "$vault_root_password")
+if [ $? -ne 0 ]; then exit $?; fi
+echo vault_root_encrypted_password >> $vault_var_list
+
+vault_deploy_encrypted_password=$(./bin/mkpasswd "$vault_deploy_password")
+if [ $? -ne 0 ]; then exit $?; fi
+echo vault_deploy_encrypted_password >> $vault_var_list
+
+echo "---" > $VAULT_VARS
+for i in $(cat $vault_var_list); do
+  echo "$i: $(eval echo \\\'\"\$$i\"\\\')" >> $VAULT_VARS
+done
+
+vault_pass='This is my c00l vault password'
+prompt_with_default "Your vault password" vault_pass
+
+echo "$vault_pass" > $VAULT_PASS
+cp $tmp_vars $VARS

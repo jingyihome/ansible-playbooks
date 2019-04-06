@@ -1,0 +1,6 @@
+#!/bin/sh
+#
+# generate a linux sha-512 hashed password.
+#
+docker pull kayvan/mkpasswd > /dev/null 2>&1
+docker run --rm kayvan/mkpasswd "$1"

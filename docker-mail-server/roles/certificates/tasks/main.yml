@@ -1,0 +1,57 @@
+---
+- name: Set up the mount path
+  file: path=/mnt/docker/nginx/certs state=directory recurse=yes
+
+- name: set of hostnames
+  set_fact:
+    ssl_domains: >
+      -d mail.{{ domain_name }}
+      -d webmail.{{ domain_name }}
+      -d postfixadmin.{{ domain_name }}
+      -d spam.{{ domain_name }}
+      -d www.{{ domain_name }}
+
+- name: Add store to the list
+  set_fact:
+    ssl_domains: "{{ ssl_domains | trim() }} -d store.{{ domain_name }}"
+  when: use_opencart
+
+- name: Add poweradmin to the list
+  set_fact:
+    ssl_domains: "{{ ssl_domains | trim() }} -d poweradmin.{{ domain_name }}"
+  when: use_poweradmin
+
+- name: Add pritunl to the list
+  set_fact:
+    ssl_domains: "{{ ssl_domains | trim() }} -d vpn.{{ domain_name }}"
+  when: use_pritunl
+
+- name: Generate certs
+  shell: >
+    docker run --rm -v /mnt/docker/nginx/certs:/etc/letsencrypt
+    -p 80:80 -p 443:443 kayvan/letsencrypt
+    certonly --standalone --rsa-key-size 4096 --agree-tos
+    -m {{ admin_email }}
+    {{ ssl_domains }}
+    -d {{ domain_name }}
+  args:
+    creates: /mnt/docker/nginx/certs/live/mail.{{ domain_name }}
+
+- name: Install certbot
+  copy:
+    src: files/certbot
+    dest: /usr/local/bin/certbot
+    mode: 0755
+
+- name: Renew script
+  template:
+    src: files/renew
+    dest: /usr/local/bin/renew
+    mode: 0755
+
+- name: Set up renewal cron job
+  cron:
+    name: "renew letsencrypt"
+    hour: 2
+    minute: 19
+    job: "/usr/local/bin/renew"

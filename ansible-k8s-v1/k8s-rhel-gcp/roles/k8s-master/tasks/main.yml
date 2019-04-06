@@ -1,0 +1,50 @@
+---
+
+- python_requirements_facts:
+    dependencies:
+      - openshift
+      - requests
+
+- name: Download rbac-kdd.yaml
+  get_url:
+    url: https://tinyurl.com/yb4xturm
+    dest: /home/roderick/rbac-kdd.yaml
+    mode: 0644
+
+- name: Download calico.yaml
+  get_url:
+    url: https://tinyurl.com/y8lvqc9g
+    dest: /home/roderick/calico.yaml
+    mode: 0644
+
+- stat: path=/etc/kubernetes/admin.conf
+  register: kubeadmconf
+
+- name: Initialize master
+  shell: kubeadm init --kubernetes-version 1.13.3 --pod-network-cidr 192.168.0.0/16 |tee kubeadm-init.out 
+  become: true
+  when: not kubeadmconf.stat.exists
+
+- name: Create $HOME/.kube directory
+  file:
+    path: /home/roderick/.kube
+    state: directory
+    owner: roderick
+    group: roderick
+    mode: 0755
+
+- name: Copy admin.conf to $HOME/.kube
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/roderick/.kube/config
+    remote_src: yes
+    owner: roderick
+    group: roderick
+  become: true
+
+- name: Fetching kubeadm-init.out from master
+  fetch:
+    src: kubeadm-init.out
+    dest: ./kubeadm-init.out
+    flat: true
+

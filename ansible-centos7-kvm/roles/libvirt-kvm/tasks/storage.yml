@@ -1,0 +1,3 @@
+---
+- name: libvirt-kvm | storage | create default storage pool
+  virt_pool: autostart=yes state=active name={{ KVM_STORAGE_POOL.NAME }} xml='{{ lookup("template", "kvm_storage_pool.xml.j2") }}'

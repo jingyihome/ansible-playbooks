@@ -1,0 +1,17 @@
+---
+required_packages:
+  - ufw
+  - fail2ban
+  - fail2ban-systemd
+  - python3-inotify
+  - ssmtp
+  - logwatch
+  - checkpolicy
+  - policycoreutils-python-utils
+
+optional_packages:
+  - mosh
+  - vim
+
+ssh_service_name: sshd
+cron_service_name: crond

@@ -1,0 +1,22 @@
+---
+- name: Add apt-key
+  apt_key: id=E56151BF keyserver=keyserver.ubuntu.com state=present
+
+- name: Add mesosphere repo
+  apt_repository: repo='deb {{ mesosphere_apt_url }} {{ ansible_distribution_release | lower }} main' state=present update_cache=yes
+
+- name: Pin Mesos version
+  template:
+    src: mesos.pref.j2
+    dest: /etc/apt/preferences.d/mesos.pref
+  when: mesos_apt_pin_priority | default(false) | bool
+
+- name: Install Debian OS packages
+  apt: pkg={{ item }} state=present update_cache=yes cache_valid_time=3600
+  with_items:
+    - wget
+    - curl
+    - unzip
+    - python-setuptools
+    - python-dev
+    - "{{ mesos_apt_package }}"

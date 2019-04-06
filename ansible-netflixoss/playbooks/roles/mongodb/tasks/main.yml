@@ -1,0 +1,44 @@
+---
+# MongoDB role
+- name: Install MongoDB (apt version)
+  apt: pkg={{ item }} state=latest
+  with_items:
+    - mongodb
+  when: ansible_distribution == 'Ubuntu'
+  tags: mongodb
+  
+#- name: Install MongoDB (yum version)
+#  yum: pkg={{ item }} state=latest enablerepo=epel
+#  with_items:
+#    - mongodb
+#    - mongodb-server
+#  when: ansible_distribution == 'Amazon'
+#  tags: mongodb
+
+- name: Install Selected Yum Repository for MongoDB
+  copy: src=../files/mongodb.repo dest=/etc/yum.repos.d/mongodb.repo
+  when: ansible_distribution == 'Amazon'
+  tags: mongodb
+
+- name: Install MongoDB (yum version)
+  yum: pkg={{ item }} state=latest
+  with_items:
+    - mongo-10gen
+    - mongo-10gen-server
+  when: ansible_distribution == 'Amazon'
+  tags: mongodb
+  
+- name: Starting MongoDB service
+  service: name={{ mongodb_service_name }} state=started
+  when: not_ami_build
+  tags: mongodb
+  
+- name: Stopping MongoDB service
+  service: name={{ mongodb_service_name }} state=stopped
+  when: ami_build
+  tags: mongodb
+  
+
+
+ 
+

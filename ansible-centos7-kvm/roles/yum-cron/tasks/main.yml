@@ -1,0 +1,17 @@
+---
+- name: yum-cron-daily | only security updates
+  lineinfile: dest=/etc/yum/yum-cron.conf regexp="^update_cmd" line="update_cmd = security" state=present
+  notify: restart yum-cron
+
+- name: yum-cron-daily | apply updates
+  lineinfile: dest=/etc/yum/yum-cron.conf regexp="^apply_updates" line="apply_updates = yes" state=present
+  notify: restart yum-cron
+
+- name: yum-cron-daily | mail notifications
+  lineinfile: dest=/etc/yum/yum-cron.conf regexp="^emit_via" line="emit_via = email" state=present
+  notify: restart yum-cron
+
+- name: yum-cron-daily | ignore updates for
+  lineinfile: dest=/etc/yum/yum-cron.conf line="exclude = {{ AUTO_UPDATES_IGNORE }}" state=present
+  when: AUTO_UPDATES_IGNORE is defined
+  notify: restart yum-cron

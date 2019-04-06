@@ -1,0 +1,5 @@
+---
+
+- name: restart freeradius
+  shell: /etc/init.d/freeradius restart
+

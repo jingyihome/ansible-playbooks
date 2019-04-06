@@ -1,0 +1,42 @@
+---
+ROOT_PASSWORD: "{{ vault_ROOT_PASSWORD }}"
+ADMIN_USERNAME: admin
+ADMIN_PASSWORD: "{{ vault_ADMIN_PASSWORD }}"
+ADMIN_PUBLIC_KEYS:
+  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCvuiE++RDS7f9V2I9NFdsW1TM4XppSud8dgtSGJJayplQgS184G++wfSpcn2ljstbhXsKDm247BxDv2pKO5ex1nOL5TNePny6vk5yDAAkPS+TGbPeHla/G8tj6fjlkC/YK/Bv07/nWmZbZMq3E+q3RcsKqoxpHYZfRHWsJLs5GFrY2ddHdgMfzTc6H/k0d67ejZ2wvYvB9r5Xu43oAfBiIlja41Beva65kHmValRrwB28IgB0Px2mNjr0lLt1GDram+mcCR7n8UgkLpIc14yZal82Rvzy7rUbPHblNe/TtwT2YwURVy0xoEkBxiP+TaKegwuWIRGLd3pqD2H44z4mp Lorenzo@avalon
+  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDartoaJ7Rejrh7AOAMiePQvN0VkxzeYqq/kLOLOwZIQFPEaYH3UUxepyDQIjZpveanWh4krI32COGC/u8A43yDqLH/DuvGgjJUmHHw8AfTXpt22pM5XhRmxLsY5/50aUx/rKwvnZoZZScolOusWDAQyzSMqakhkCMTQVHaKdzc69mz8bXqgNy1n1cuy8XSpQSmvpJUpJpqu9r7K1Y1e35cqqNzVYp2vMMrCf2GYhQp1JLai3nwexHR/I1RERczNx+DCCPS9FrqtS74DeO6VR9sCK25Vr5eGTLvSsE0PSISKxXHwSyGLA3Ezzhq9TRYEeBpIpKprjpZoHVKPBU1oi+z lg@thule
+DEFAULT_PACKAGES:
+  - fail2ban
+  - bash-completion
+  - vim-enhanced
+  - postfix
+  - mailx
+  - ssmtp
+  - yum-cron
+  - htop
+  - git
+  - ansible
+PUBLIC_INTERFACES:
+  - enp2s0
+ROOT_ALIAS: lg@lgaggini.net
+AUTO_UPDATES_IGNORE: kernel*'
+KVM_PACKAGES:
+  - qemu-kvm
+  - libvirt
+  - libvirt-python
+  - python-lxml
+  - mkisofs
+KVM_STORAGE_POOL:
+  NAME: kvm_storage_pool
+  SOURCE: kvm_storage_pool
+  PATH: /dev/kvm_storage_pool
+KVM_NETWORKS:
+  INTERNAL:
+    ADDRESS: 192.168.0.1
+    NETMASK: 255.255.255.0
+  PRIVATE:
+    ADDRESS: 10.0.0.1
+    NETMASK: 255.255.255.0
+  PUBLIC:
+    ADDRESS: 2a01:4f8:212:5cf::1
+    PREFIX: 64

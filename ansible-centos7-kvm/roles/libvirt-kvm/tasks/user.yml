@@ -1,0 +1,6 @@
+---
+- name: libvirt-kbm | user | add {{ ADMIN_USERNAME }} to libvirt group
+  user: name={{ ADMIN_USERNAME }} groups=libvirt append=yes
+
+- name: libvirt-kbm | user | add polkit rule for manage to libvirt group
+  copy: src=50-libvirt-group-access.pkla dest=/etc/polkit-1/localauthority/50-local.d/50-libvirt-group-access.pkla owner=root group=root mode=0644

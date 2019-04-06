@@ -1,0 +1,7 @@
+---
+# tasks file for deploy-app
+#
+- name: deploy web app
+  copy: src={{ war_name }} dest={{ war_root_dir }}
+        owner=tomcat  group=tomcat mode=0755
+  notify: restart tomcat service

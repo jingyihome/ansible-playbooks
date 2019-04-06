@@ -1,0 +1,23 @@
+- name: Copy admin.yml
+  copy:
+    src: files/kubernetes/admin.yml
+    dest: /root/admin.yml
+
+- name: Copy kube-flannel.yml
+  copy:
+    src: files/kubernetes/kube-flannel.yml
+    dest: /root/kube-flannel.yml
+
+
+- name: Copy kubernetes-dashboard.yaml
+  copy:
+    src: files/kubernetes/kubernetes-dashboard.yaml
+    dest: /root/kubernetes-dashboard.yaml
+
+
+- name: Install Flannel Network and dashboard and   
+  shell: |
+    kubectl apply -f /root/kube-flannel.yml
+    kubectl apply -f /root/kubernetes-dashboard.yaml
+    kubectl apply -f /root/admin.yml    
+

@@ -1,0 +1,24 @@
+- name: add shadowsocks repo
+  apt_repository: 
+    repo: 'deb {{ shadowsocks_libev_repo_prefix }} {{ shadowsocks_libev_repo_release }} main' 
+    state: present
+    filename: "shadowsocks-libev-backports"
+    update_cache: yes
+  tags:
+    - ss-server
+
+- name: install shadowsocks libev
+  apt: 
+    pkg: shadowsocks-libev
+    state: installed 
+    force: yes
+    default_release: "{{ shadowsocks_libev_repo_release }}"
+  tags:
+    - ss-server
+
+- name: make a symbol link to /opt/ss-server/
+  file: src=/usr/bin/ss-server dest=/opt/ss-server/ss-server state=link
+  tags:
+    - ss-server
+  notify:
+    - "restart shadowsocks-server {{ name }}"

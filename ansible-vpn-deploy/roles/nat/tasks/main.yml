@@ -1,0 +1,41 @@
+---
+#NAT
+
+- name: Ensure iptables is installed
+  action: apt pkg=iptables state=installed
+  tags: nat
+
+- name: Enforce ipv4.ip_forward
+  action: sysctl name=net.ipv4.ip_forward value=1 state=present
+  tags: nat
+
+- name: make sure /opt/easynat exists
+  action: file path=/opt/easynat/ state=directory
+  tags: nat
+
+- name: install easynat
+  template: src=opt/easynat/setup_nat dest=/opt/easynat/setup_nat mode=755
+  notify: 
+    - setup nat rules
+  tags: nat
+  when: not nat_enable_split
+
+
+- name: set rp_filter to 0
+  sysctl: name="{{ item }}" value=0 sysctl_set=yes
+  with_items: 
+    - net.ipv4.conf.default.rp_filter
+    - net.ipv4.conf.all.rp_filter
+  tags: nat
+  when: nat_enable_split
+
+- name: install easynat split mode
+  template: src=opt/easynat/setup_nat_split dest=/opt/easynat/setup_nat mode=755
+  notify: 
+    - setup nat rules
+  tags: nat
+  when: nat_enable_split
+
+- name: make sure easynat is in rc.local
+  lineinfile: dest=/etc/rc.local insertafter="^#" regexp="/opt/easynat/setup_nat" line="/opt/easynat/setup_nat" state=present
+  tags: nat

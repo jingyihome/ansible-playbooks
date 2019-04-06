@@ -1,0 +1,40 @@
+#A example of Ansible Invetery
+#Some useful parameters:
+# - ansible_ssh_port
+# - ansible_ssh_user
+# - ansible_ssh_private_key_file
+#Check out http://www.ansibleworks.com/docs/patterns.html#list-of-reserved-inventory-parameters  for all possible parameters
+
+localhost              ansible_connection=local
+vpn.example.com  ansible_ssh_user=root  ansible_ssh_private_key_file=~/.ssh/some_key
+auth.example.com  ansible_ssh_user=root  ansible_ssh_private_key_file=~/.ssh/some_key
+
+test_cn1 ansible_ssh_host=test_cn1.example.com ansible_ssh_port=22 ansible_ssh_user=root l2tp_eth_client_remote_ip=test_us1.example.com
+test_us1 ansible_ssh_host=test_us1.example.com ansible_ssh_port=22 ansible_ssh_user=root
+
+[l2tp-eth-client]
+test_cn1
+
+[l2tp-eth-server]
+test_us1
+
+[l2tp]
+vpn.example.com
+
+[pptp]
+vpn.example.com
+
+[ipsec]
+vpn.example.com
+
+[openconnect]
+vpn.example.com
+
+[vpn]
+vpn.example.com
+
+[chinadns]
+dns.example.com update_resolvconf=false
+
+[auth]
+auth.example.com
