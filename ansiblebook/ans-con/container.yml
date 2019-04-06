@@ -1,0 +1,29 @@
+version: "2"
+settings:
+  conductor_base: debian:jessie
+services:
+  ac-nginx:
+    from: nginx
+    command: [nginx, -g, daemon off;]
+    roles:
+      - ghost-nginx
+    ports:
+      - "8443:443"
+      - "8000:80"
+    dev_overrides:
+      volumes:
+        - $PWD/certs:/certs
+      links:
+        - ghost
+  ghost:
+    from: ghost
+    dev_overrides:
+      volumes:
+        - $PWD/ghostdata:/var/lib/ghost
+registries:
+  docker:
+    namespace: ansiblebook
+    url: https://index.docker.io/v1/
+  quay:
+    namespace: ansiblebook
+    url: https://quay.io

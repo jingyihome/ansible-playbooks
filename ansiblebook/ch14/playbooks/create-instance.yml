@@ -1,0 +1,16 @@
+- name: start an instance with the packered ami
+  hosts: localhost
+  gather_facts: False
+  tasks:
+    - name: start a xenial instance from a known ami
+      ec2:
+        region: us-west-1
+        image: ami-79df8219
+        instance_type: t2.micro
+        key_name: mykey
+        group: [web, ssh, outbound]
+        instance_tags:
+          Name: packer test
+      register: result
+    - debug: var=result
+

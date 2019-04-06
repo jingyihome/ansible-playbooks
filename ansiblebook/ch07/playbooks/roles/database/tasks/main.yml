@@ -1,0 +1,39 @@
+---
+- name: install apt packages
+  apt: pkg={{ item }} update_cache=yes cache_valid_time=3600
+  become: True
+  with_items:
+    - libpq-dev
+    - postgresql
+    - python-psycopg2
+- name: copy configuration file
+  copy: >
+    src=postgresql.conf dest=/etc/postgresql/9.3/main/postgresql.conf
+    owner=postgres group=postgres mode=0644
+  become: True
+  notify: restart postgres
+- name: copy client authentication configuration file
+  copy: >
+    src=pg_hba.conf dest=/etc/postgresql/9.3/main/pg_hba.conf
+    owner=postgres group=postgres mode=0640
+  become: True
+  notify: restart postgres
+- name: create project locale
+  locale_gen: name={{ locale }}
+  become: True
+- name: create a user
+  postgresql_user:
+    name: "{{ database_user }}"
+    password: "{{ db_pass }}"
+  become: True
+  become_user: postgres
+- name: create the database
+  postgresql_db:
+    name: "{{ database_name }}"
+    owner: "{{ database_user }}"
+    encoding: UTF8
+    lc_ctype: "{{ locale }}"
+    lc_collate: "{{ locale }}"
+    template: template0
+  become: True
+  become_user: postgres

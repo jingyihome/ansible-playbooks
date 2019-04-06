@@ -1,0 +1,11 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ansible/tower"
+
+  # This may be required ot bring up the 10.42.0.42 interface
+  config.vm.provision "shell", inline: <<-SHELL
+    systemctl restart network.service
+  SHELL
+end

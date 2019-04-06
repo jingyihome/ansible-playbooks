@@ -1,0 +1,10 @@
+---
+- name: Create Nginx image
+  hosts: localhost
+  gather_facts: False
+  tasks:
+    - name: create Nginx image
+      docker_image:
+        name: ansiblebook/nginx-ghost
+        path: nginx
+        force: yes

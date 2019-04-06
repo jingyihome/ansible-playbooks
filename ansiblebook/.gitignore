@@ -1,0 +1,7 @@
+.vagrant
+ch05/venv
+ch05/myproject
+ch06/playbooks/secrets.yml
+ch08/playbooks/secrets.yml
+*.retry
+*.pyc

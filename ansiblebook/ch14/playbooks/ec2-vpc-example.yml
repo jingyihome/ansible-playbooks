@@ -1,0 +1,131 @@
+---
+- name: launch webservers into a specific vpc
+  hosts: localhost
+  vars:
+    region: us-west-1
+    instance_type: t2.micro
+    count: 1
+    cidrs:
+      web: 10.0.0.0/24
+      db: 10.0.1.0/24
+  tasks:
+  - name: create a vpc
+    ec2_vpc_net:
+      region: "{{ region }}"
+      name: book
+      cidr_block: 10.0.0.0/16
+      tags: {env: production }
+    register: result
+  - set_fact: "vpc_id={{ result.vpc.id }}"
+  - name: add gateway
+    ec2_vpc_igw:
+      region: "{{ region }}"
+      vpc_id: "{{ vpc_id }}"
+  - name: create web subnet
+    ec2_vpc_subnet:
+      region: "{{ region }}"
+      vpc_id: "{{ vpc_id }}"
+      cidr: "{{ cidrs.web }}"
+      tags: { env: production, tier: web}
+    register: web_subnet
+  - set_fact: "web_subnet_id={{ web_subnet.subnet.id }}"
+  - name: create db subnet
+    ec2_vpc_subnet:
+      region: "{{ region }}"
+      vpc_id: "{{ vpc_id }}"
+      cidr: "{{ cidrs.db }}"
+      tags: { env: production, tier: db}
+  - name: add routing table
+    ec2_vpc_route_table:
+      region: "{{ region }}"
+      vpc_id: "{{ vpc_id }}"
+      tags:
+        purpose: permit-outbound
+      subnets:
+        - "{{ cidrs.web }}"
+        - "{{ cidrs.db }}"
+      routes:
+        - dest: 0.0.0.0/0
+          gateway_id: igw
+  - name: set ec2 keypair
+    ec2_key: "name=mykey key_material={{ item }}"
+    with_file: ~/.ssh/id_rsa.pub
+  - name: web security group
+    ec2_group:
+      name: web
+      region: "{{ region }}"
+      description: allow http and https access
+      vpc_id: "{{ vpc_id }}"
+      rules:
+        - proto: tcp
+          from_port: 80
+          to_port: 80
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          from_port: 443
+          to_port: 443
+          cidr_ip: 0.0.0.0/0
+  - name: ssh security group
+    ec2_group:
+      name: ssh
+      region: "{{ region }}"
+      description: allow ssh access
+      vpc_id: "{{ vpc_id }}"
+      rules:
+        - proto: tcp
+          from_port: 22
+          to_port: 22
+          cidr_ip: 0.0.0.0/0
+  - name: outbound security group
+    ec2_group:
+      name: outbound
+      description: allow outbound connections to the internet
+      region: "{{ region }}"
+      vpc_id: "{{ vpc_id }}"
+      rules_egress:
+        - proto: all
+          cidr_ip: 0.0.0.0/0
+  - name: Get the ubuntu xenial ebs ssd AMI
+    ec2_ami_find:
+      name: "ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*"
+      region: "{{ region }}"
+      sort: name
+      sort_order: descending
+      sort_end: 1
+      no_result_action: fail
+    register: ubuntu_image
+  - set_fact: "ami={{ ubuntu_image.results[0].ami_id }}"
+  - name: start the instances
+    ec2:
+      image: "{{ ami }}"
+      region: "{{ region }}"
+      instance_type: "{{ instance_type }}"
+      assign_public_ip: True
+      key_name: mykey
+      group: [web, ssh, outbound]
+      instance_tags: { Name: book, type: web, env: production }
+      exact_count: "{{ count }}"
+      count_tag: { type: web }
+      vpc_subnet_id: "{{ web_subnet_id }}"
+      wait: yes
+    register: ec2
+  - name: add the instance to web and production groups
+    add_host: hostname={{ item.public_dns_name }} groups=web,production
+    with_items: "{{ ec2.tagged_instances }}"
+    when: item.public_dns_name is defined
+  - name: wait for ssh server to be running
+    wait_for: host={{ item.public_dns_name }} port=22 search_regex=OpenSSH
+    with_items: "{{ ec2.tagged_instances }}"
+    when: item.public_dns_name is defined
+
+- name: configure webservers
+  hosts: web:&production
+  become: True
+  gather_facts: False
+  vars:
+    ansible_python_interpreter: /usr/bin/python2.7
+  pre_tasks:
+    - name: install python
+      raw: apt-get install -y python2.7
+  roles:
+    - web

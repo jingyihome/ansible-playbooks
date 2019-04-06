@@ -1,0 +1,16 @@
+version: '2'
+services:
+  nginx:
+    image: ansiblebook/nginx-ghost
+    ports:
+      - "8443:443"
+      - "8000:80"
+    volumes:
+      - ${PWD}/certs:/certs
+    links:
+      - ghost
+  ghost:
+    image: ghost
+    volumes:
+      - ${PWD}/ghostdata:/var/lib/ghost
+
