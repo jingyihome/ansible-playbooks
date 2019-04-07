@@ -1,0 +1,8 @@
+  - name: Create Smokeping Install Dir
+    file: dest=/tmp/smokeping_install/ state=directory
+    when: ansible_os_family == "RedHat" and ansible_distribution_version|int >=6
+  - name: Copy Smokeping Software To Redhat Client
+    copy: src={{ item }} dest=/tmp/smokeping_install/{{ item }} owner=root group=root
+    with_items:
+      - smokeping.tar.gz
+    when: ansible_os_family == "RedHat" and ansible_distribution_version|int >=6
